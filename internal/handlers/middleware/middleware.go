@@ -1,6 +1,7 @@
-package main
+package middleware
 
 import (
+	"blog-backend/pkg/jwt"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -45,7 +46,7 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
 
 		// 5. Валидируем токен с помощью ValidateToken() из auth.go
-		claims, err := ValidateToken(tokenString)
+		claims, err := jwt.ValidateToken(tokenString)
 		if err != nil {
 			sendAuthError(w, fmt.Sprintf("Invalid token: %v", err))
 			return

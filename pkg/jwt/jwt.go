@@ -1,6 +1,7 @@
-package main
+package jwt
 
 import (
+	"blog-backend/internal/models"
 	"fmt"
 	"os"
 
@@ -53,7 +54,7 @@ func CheckPassword(password, hash string) bool {
 }
 
 // GenerateToken создает JWT токен для пользователя
-func GenerateToken(user User) (string, error) {
+func GenerateToken(user models.User) (string, error) {
 	// TODO: Реализуйте генерацию JWT токена
 	//
 	// Что нужно сделать:
@@ -66,7 +67,7 @@ func GenerateToken(user User) (string, error) {
 	// 4. Подпишите токен с помощью token.SignedString(jwtSecret)
 	//
 	// Документация: https://pkg.go.dev/github.com/golang-jwt/jwt/v5
-	claims := Claims{
+	claims := models.Claims{
 		UserID:   user.ID,
 		Email:    user.Email,
 		Username: user.Username,
@@ -85,14 +86,14 @@ func GenerateToken(user User) (string, error) {
 }
 
 // ValidateToken проверяет и парсит JWT токен
-func ValidateToken(tokenString string) (*Claims, error) {
+func ValidateToken(tokenString string) (*models.Claims, error) {
 	// Проверяем, что токен не пустой
 	if tokenString == "" {
 		return nil, fmt.Errorf("token is empty")
 	}
 
 	// 1. Создайте пустую структуру claims := &Claims{}
-	claims := &Claims{}
+	claims := &models.Claims{}
 
 	// 3. В keyFunc проверьте, что алгоритм подписи HMAC (*jwt.SigningMethodHMAC)
 	keyFunc := func(token *jwt.Token) (interface{}, error) {

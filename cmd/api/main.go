@@ -1,9 +1,13 @@
 package main
 
 import (
+	"blog-backend/internal/config"
+	"blog-backend/internal/handlers"
+	"blog-backend/internal/handlers/middleware"
+	"blog-backend/internal/repository/postgres"
+	"blog-backend/pkg/jwt"
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/joho/godotenv"
 )
@@ -15,24 +19,24 @@ func main() {
 	}
 
 	// Инициализация JWT секретного ключа
-	InitAuth()
+	jwt.InitAuth()
 
 	// TODO: Инициализация подключения к базе данных
 	// Используйте функцию InitDB() из database.go
-	if err := InitDB(); err != nil {
+	if err := postgres.InitDB(); err != nil {
 		log.Fatal("Failed to connect to database:", err)
 	}
-	defer CloseDB()
+	defer postgres.CloseDB()
 
 	// TODO: Настройка HTTP маршрутов
 	// Используйте обработчики из handlers.go
-	http.HandleFunc("/register", RegisterHandler)
-	http.HandleFunc("/login", LoginHandler)
-	http.HandleFunc("/profile", AuthMiddleware(ProfileHandler))
-	http.HandleFunc("/health", HealthHandler)
+	http.HandleFunc("/register", handlers.RegisterHandler)
+	http.HandleFunc("/login", handlers.LoginHandler)
+	http.HandleFunc("/profile", middleware.AuthMiddleware(handlers.ProfileHandler))
+	http.HandleFunc("/health", handlers.HealthHandler)
 
 	// Запуск сервера
-	port := getEnv("SERVER_PORT", "8080")
+	port := config.GetEnv("SERVER_PORT", "8080")
 	log.Printf("🚀 Server starting on port %s", port)
 	log.Printf("📝 Register: POST http://localhost:%s/register", port)
 	log.Printf("🔐 Login: POST http://localhost:%s/login", port)
@@ -40,12 +44,4 @@ func main() {
 	log.Printf("❤️  Health: GET http://localhost:%s/health", port)
 
 	log.Fatal(http.ListenAndServe(":"+port, nil))
-}
-
-// getEnv получает значение переменной окружения или возвращает значение по умолчанию
-func getEnv(key, defaultValue string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return defaultValue
 }

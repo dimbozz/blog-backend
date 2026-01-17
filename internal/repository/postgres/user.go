@@ -1,59 +1,15 @@
-package main
+package postgres
 
 import (
+	"blog-backend/internal/models"
 	"database/sql"
 	"fmt"
 
 	_ "github.com/lib/pq"
 )
 
-// Глобальная переменная для подключения к БД
-var db *sql.DB
-
-// InitDB инициализирует подключение к базе данных
-func InitDB() error {
-	// TODO: Реализуйте подключение к PostgreSQL
-	//
-	// Что нужно сделать:
-	// 1. Составьте строку подключения используя fmt.Sprintf()
-	//    Формат: "host=%s port=%s user=%s password=%s dbname=%s sslmode=disable"
-	// 2. Получите параметры из переменных окружения с помощью getEnv()
-	// 3. Откройте соединение с sql.Open("postgres", connStr)
-	// 4. Проверьте подключение с помощью db.Ping()
-	// 5. Обработайте ошибки на каждом шаге
-	//
-	// Переменные окружения: DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME
-
-	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		getEnv("DB_HOST", "localhost"),
-		getEnv("DB_PORT", "5432"),
-		getEnv("DB_USER", "postgres"),
-		getEnv("DB_PASSWORD", "postgres"),
-		getEnv("DB_NAME", "secure_service"),
-	)
-
-	var err error
-	db, err = sql.Open("postgres", connStr)
-	if err != nil {
-		return fmt.Errorf("failed to open database: %v", err)
-	}
-
-	if err := db.Ping(); err != nil {
-		return fmt.Errorf("failed to ping database: %v", err)
-	}
-
-	return nil
-}
-
-// CloseDB закрывает соединение с базой данных
-func CloseDB() {
-	if db != nil {
-		db.Close()
-	}
-}
-
 // CreateUser создает нового пользователя в базе данных
-func CreateUser(email, username, passwordHash string) (*User, error) {
+func CreateUser(email, username, passwordHash string) (*models.User, error) {
 	// TODO: Реализуйте создание пользователя
 	// КРИТИЧЕСКИ ВАЖНО: Используйте параметризованный запрос для защиты от SQL-инъекций!
 	//
@@ -74,10 +30,10 @@ func CreateUser(email, username, passwordHash string) (*User, error) {
         RETURNING id, created_at
     `
 	// Инициализируем структуру User
-	user := &User{}
+	user := &models.User{}
 	// 2. Выполняем запрос с db.QueryRow(query, email, username, passwordHash)
 	// 3. Считываем результат в переменные user.ID и user.CreatedAt
-	err := db.QueryRow(query, email, username, passwordHash).Scan(&user.ID, &user.CreatedAt)
+	err := Db.QueryRow(query, email, username, passwordHash).Scan(&user.ID, &user.CreatedAt)
 	// 5. Обрабатываем ошибки
 	if err != nil {
 		return nil, fmt.Errorf("failed to create user: %w", err)
@@ -91,7 +47,7 @@ func CreateUser(email, username, passwordHash string) (*User, error) {
 }
 
 // GetUserByEmail находит пользователя по email
-func GetUserByEmail(email string) (*User, error) {
+func GetUserByEmail(email string) (*models.User, error) {
 	// TODO: Реализуйте поиск пользователя по email
 	// КРИТИЧЕСКИ ВАЖНО: Используйте параметризованный запрос!
 	//
@@ -111,11 +67,11 @@ func GetUserByEmail(email string) (*User, error) {
         WHERE email = $1
     `
 	// Инициализируем структуру User
-	user := &User{}
+	user := &models.User{}
 
 	// 2. Выполняем запрос с db.QueryRow(query, email)
 	// 3. Считываем все поля в структуру User с помощью Scan()
-	err := db.QueryRow(query, email).Scan(
+	err := Db.QueryRow(query, email).Scan(
 		&user.ID,
 		&user.Email,
 		&user.Username,
@@ -135,7 +91,7 @@ func GetUserByEmail(email string) (*User, error) {
 }
 
 // GetUserByID находит пользователя по ID
-func GetUserByID(userID int) (*User, error) {
+func GetUserByID(userID int) (*models.User, error) {
 	// TODO: Реализуйте поиск пользователя по ID
 	// КРИТИЧЕСКИ ВАЖНО: Используйте параметризованный запрос!
 	//
@@ -153,9 +109,9 @@ func GetUserByID(userID int) (*User, error) {
         WHERE id = $1
     `
 
-	user := &User{}
+	user := &models.User{}
 	// 3. Выполняем запрос
-	err := db.QueryRow(query, userID).Scan(
+	err := Db.QueryRow(query, userID).Scan(
 		&user.ID,
 		&user.Email,
 		&user.Username,
@@ -191,16 +147,11 @@ func UserExistsByEmail(email string) (bool, error) {
     `
 
 	var ifUserExists bool
-	err := db.QueryRow(query, email).Scan(&ifUserExists)
+	err := Db.QueryRow(query, email).Scan(&ifUserExists)
 
 	if err != nil {
 		return false, fmt.Errorf("failed to check user exists: %w", err)
 	}
 
 	return ifUserExists, nil
-}
-
-// GetDB возвращает подключение к базе данных (для тестирования)
-func GetDB() *sql.DB {
-	return db
 }

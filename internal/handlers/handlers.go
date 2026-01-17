@@ -1,6 +1,10 @@
-package main
+package handlers
 
 import (
+	"blog-backend/internal/handlers/middleware"
+	"blog-backend/internal/models"
+	"blog-backend/internal/repository/postgres"
+	"blog-backend/pkg/jwt"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -33,7 +37,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	// - Не забудьте установить Content-Type: application/json для ответа
 
 	// 1. Парсим JSON
-	var req RegisterRequest
+	var req models.RegisterRequest
 	if err := parseJSONRequest(r, &req); err != nil {
 		sendErrorResponse(w, "Invalid JSON", http.StatusBadRequest)
 		return
@@ -46,7 +50,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 3. Проверяем существование email
-	if exists, err := UserExistsByEmail(req.Email); err != nil {
+	if exists, err := postgres.UserExistsByEmail(req.Email); err != nil {
 		log.Printf("Database error: %v", err)
 		sendErrorResponse(w, "Internal server error", http.StatusInternalServerError)
 		return
@@ -56,7 +60,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 4. Хешируем пароль
-	passwordHash, err := HashPassword(req.Password)
+	passwordHash, err := jwt.HashPassword(req.Password)
 	if err != nil {
 		log.Printf("Hash password error: %v", err)
 		sendErrorResponse(w, "Internal server error", http.StatusInternalServerError)
@@ -64,7 +68,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 5. Создаем пользователя
-	user, err := CreateUser(req.Email, req.Username, passwordHash)
+	user, err := postgres.CreateUser(req.Email, req.Username, passwordHash)
 	if err != nil {
 		log.Printf("Create user error: %v", err)
 		sendErrorResponse(w, "Failed to create user", http.StatusInternalServerError)
@@ -72,7 +76,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 6. Генерируем токен
-	token, err := GenerateToken(*user)
+	token, err := jwt.GenerateToken(*user)
 	if err != nil {
 		log.Printf("Generate token error: %v", err)
 		sendErrorResponse(w, "Internal server error", http.StatusInternalServerError)
@@ -116,7 +120,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	// - Не возвращайте password_hash в ответе
 
 	// 1. Парсим JSON
-	var req LoginRequest
+	var req models.LoginRequest
 	if err := parseJSONRequest(r, &req); err != nil {
 		sendErrorResponse(w, "Invalid JSON", http.StatusBadRequest)
 		return
@@ -129,7 +133,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 3. Находим пользователя
-	user, err := GetUserByEmail(req.Email)
+	user, err := postgres.GetUserByEmail(req.Email)
 	if err != nil {
 		log.Printf("Database error: %v", err)
 		sendErrorResponse(w, "Invalid email or password", http.StatusUnauthorized)
@@ -141,13 +145,13 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 4. Проверяем пароль
-	if !CheckPassword(req.Password, user.PasswordHash) {
+	if !jwt.CheckPassword(req.Password, user.PasswordHash) {
 		sendErrorResponse(w, "Invalid email or password", http.StatusUnauthorized)
 		return
 	}
 
 	// 5. Генерируем токен
-	token, err := GenerateToken(*user)
+	token, err := jwt.GenerateToken(*user)
 	if err != nil {
 		log.Printf("Generate token error: %v", err)
 		sendErrorResponse(w, "Internal server error", http.StatusInternalServerError)
@@ -188,14 +192,14 @@ func ProfileHandler(w http.ResponseWriter, r *http.Request) {
 	// - Не включайте password_hash в ответ
 
 	// 1. Получаем userID из контекста
-	userID, ok := GetUserIDFromContext(r)
+	userID, ok := middleware.GetUserIDFromContext(r)
 	if !ok {
 		sendErrorResponse(w, "User ID not found in context", http.StatusInternalServerError)
 		return
 	}
 
 	// 2. Загружаем пользователя
-	user, err := GetUserByID(userID)
+	user, err := postgres.GetUserByID(userID)
 	if err != nil {
 		log.Printf("Database error: %v", err)
 		sendErrorResponse(w, "Internal server error", http.StatusInternalServerError)
@@ -219,8 +223,8 @@ func ProfileHandler(w http.ResponseWriter, r *http.Request) {
 // HealthHandler проверяет состояние сервиса
 func HealthHandler(w http.ResponseWriter, r *http.Request) {
 	// Проверяем подключение к БД
-	if db != nil {
-		if err := db.Ping(); err != nil {
+	if postgres.Db != nil {
+		if err := postgres.Db.Ping(); err != nil {
 			http.Error(w, "Database connection failed", http.StatusServiceUnavailable)
 			return
 		}
@@ -267,7 +271,7 @@ func parseJSONRequest(r *http.Request, v interface{}) error {
 }
 
 // validateRegisterRequest валидирует данные регистрации
-func validateRegisterRequest(req *RegisterRequest) error {
+func validateRegisterRequest(req *models.RegisterRequest) error {
 	if req.Email == "" {
 		return fmt.Errorf("email is required")
 	}
@@ -287,7 +291,7 @@ func validateRegisterRequest(req *RegisterRequest) error {
 }
 
 // validateLoginRequest валидирует данные входа
-func validateLoginRequest(req *LoginRequest) error {
+func validateLoginRequest(req *models.LoginRequest) error {
 	if req.Email == "" {
 		return fmt.Errorf("email is required")
 	}
