@@ -21,18 +21,35 @@
 ## 🏗️ Структура проекта
 
 ```
-secure-service/
-├── main.go              # Главный файл с запуском сервера
-├── handlers.go          # HTTP обработчики
-├── models.go            # Структуры данных
-├── database.go          # Работа с БД
-├── auth.go              # JWT и bcrypt
-├── middleware.go        # Проверка токена
-├── docker-compose.yml   # PostgreSQL в Docker
-├── init.sql             # Схема БД
-├── .env                 # Конфигурация (создать из .env.example)
-├── go.mod               # Зависимости
-└── README.md            # Этот файл
+blog-backend/
+├── README.md                   # Этот файл
+├── cmd
+│   └── api
+│       └── main.go             # Главный файл с запуском сервера
+├── docker-compose.yml          # PostgreSQL в Docker
+├── go.mod                      # Зависимости
+├── go.sum
+├── internal
+│   ├── config
+│   │   └── env.go              # Чтение переменных окружения
+│   ├── handlers                # HTTP обработчики
+│   │   └── middleware
+│   │       └── middleware.go   # Проверка токена
+│   ├── models
+│   │   └── models.go           # Структуры данных
+│   └── repository
+│       └── postgres
+│           ├── connection.go   # Подключение к БД
+│           └── user.go         # Работа с БД
+│
+├── migrations
+│   └── init.sql                # Схема БД
+├── pkg
+│   ├── jwt
+│   │   └── jwt.go              # JWT и bcrypt
+│   ├── logger
+│   └── validator
+└── task.md                     # Задание на разработку проекта
 ```
 
 ## 🚀 Быстрый старт
