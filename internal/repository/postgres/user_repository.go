@@ -1,15 +1,35 @@
 package postgres
 
 import (
-	"blog-backend/internal/models"
+	"blog-backend/internal/model"
+	"blog-backend/service"
+	"context"
 	"database/sql"
 	"fmt"
-
-	_ "github.com/lib/pq"
 )
 
+type PostgresUserRepository struct {
+	db *sql.DB
+}
+
+func (r *PostgresUserRepository) HealthCheck(ctx context.Context) error {
+	return r.db.PingContext(ctx)
+}
+
+func (r *PostgresUserRepository) FindByID(ctx context.Context, id string) (*model.User, error) {
+	query := `SELECT id, email, name, created_at FROM users WHERE id = $1`
+	var user model.User
+	err := r.db.QueryRowContext(ctx, query, id).Scan(
+		&user.ID, &user.Email, &user.Username, &user.CreatedAt,
+	)
+	if err == sql.ErrNoRows {
+		return nil, service.ErrUserNotFound
+	}
+	return &user, err
+}
+
 // CreateUser создает нового пользователя в базе данных
-func CreateUser(email, username, passwordHash string) (*models.User, error) {
+func CreateUser(email, username, passwordHash string) (*model.User, error) {
 	// TODO: Реализуйте создание пользователя
 	// КРИТИЧЕСКИ ВАЖНО: Используйте параметризованный запрос для защиты от SQL-инъекций!
 	//
@@ -30,10 +50,10 @@ func CreateUser(email, username, passwordHash string) (*models.User, error) {
         RETURNING id, created_at
     `
 	// Инициализируем структуру User
-	user := &models.User{}
+	user := &model.User{}
 	// 2. Выполняем запрос с db.QueryRow(query, email, username, passwordHash)
 	// 3. Считываем результат в переменные user.ID и user.CreatedAt
-	err := Db.QueryRow(query, email, username, passwordHash).Scan(&user.ID, &user.CreatedAt)
+	err := db.QueryRow(query, email, username, passwordHash).Scan(&user.ID, &user.CreatedAt)
 	// 5. Обрабатываем ошибки
 	if err != nil {
 		return nil, fmt.Errorf("failed to create user: %w", err)
@@ -47,7 +67,7 @@ func CreateUser(email, username, passwordHash string) (*models.User, error) {
 }
 
 // GetUserByEmail находит пользователя по email
-func GetUserByEmail(email string) (*models.User, error) {
+func GetUserByEmail(email string) (*model.User, error) {
 	// TODO: Реализуйте поиск пользователя по email
 	// КРИТИЧЕСКИ ВАЖНО: Используйте параметризованный запрос!
 	//
@@ -67,11 +87,11 @@ func GetUserByEmail(email string) (*models.User, error) {
         WHERE email = $1
     `
 	// Инициализируем структуру User
-	user := &models.User{}
+	user := &model.User{}
 
 	// 2. Выполняем запрос с db.QueryRow(query, email)
 	// 3. Считываем все поля в структуру User с помощью Scan()
-	err := Db.QueryRow(query, email).Scan(
+	err := db.QueryRow(query, email).Scan(
 		&user.ID,
 		&user.Email,
 		&user.Username,
@@ -91,7 +111,7 @@ func GetUserByEmail(email string) (*models.User, error) {
 }
 
 // GetUserByID находит пользователя по ID
-func GetUserByID(userID int) (*models.User, error) {
+func GetUserByID(userID int) (*model.User, error) {
 	// TODO: Реализуйте поиск пользователя по ID
 	// КРИТИЧЕСКИ ВАЖНО: Используйте параметризованный запрос!
 	//
@@ -109,9 +129,9 @@ func GetUserByID(userID int) (*models.User, error) {
         WHERE id = $1
     `
 
-	user := &models.User{}
+	user := &model.User{}
 	// 3. Выполняем запрос
-	err := Db.QueryRow(query, userID).Scan(
+	err := db.QueryRow(query, userID).Scan(
 		&user.ID,
 		&user.Email,
 		&user.Username,
@@ -147,7 +167,7 @@ func UserExistsByEmail(email string) (bool, error) {
     `
 
 	var ifUserExists bool
-	err := Db.QueryRow(query, email).Scan(&ifUserExists)
+	err := db.QueryRow(query, email).Scan(&ifUserExists)
 
 	if err != nil {
 		return false, fmt.Errorf("failed to check user exists: %w", err)

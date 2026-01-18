@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"blog-backend/internal/handlers/middleware"
-	"blog-backend/internal/models"
+	"blog-backend/internal/model"
 	"blog-backend/internal/repository/postgres"
 	"blog-backend/pkg/jwt"
 	"encoding/json"
@@ -37,7 +37,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	// - Не забудьте установить Content-Type: application/json для ответа
 
 	// 1. Парсим JSON
-	var req models.RegisterRequest
+	var req model.RegisterRequest
 	if err := parseJSONRequest(r, &req); err != nil {
 		sendErrorResponse(w, "Invalid JSON", http.StatusBadRequest)
 		return
@@ -120,7 +120,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	// - Не возвращайте password_hash в ответе
 
 	// 1. Парсим JSON
-	var req models.LoginRequest
+	var req model.LoginRequest
 	if err := parseJSONRequest(r, &req); err != nil {
 		sendErrorResponse(w, "Invalid JSON", http.StatusBadRequest)
 		return
@@ -220,25 +220,6 @@ func ProfileHandler(w http.ResponseWriter, r *http.Request) {
 	sendJSONResponse(w, response, http.StatusOK)
 }
 
-// HealthHandler проверяет состояние сервиса
-func HealthHandler(w http.ResponseWriter, r *http.Request) {
-	// Проверяем подключение к БД
-	if postgres.Db != nil {
-		if err := postgres.Db.Ping(); err != nil {
-			http.Error(w, "Database connection failed", http.StatusServiceUnavailable)
-			return
-		}
-	}
-
-	// Возвращаем статус OK
-	w.Header().Set("Content-Type", "application/json")
-	response := map[string]string{
-		"status":  "ok",
-		"message": "Service is running",
-	}
-	json.NewEncoder(w).Encode(response)
-}
-
 // sendJSONResponse отправляет JSON ответ (вспомогательная функция)
 func sendJSONResponse(w http.ResponseWriter, data interface{}, statusCode int) {
 	w.Header().Set("Content-Type", "application/json")
@@ -271,7 +252,7 @@ func parseJSONRequest(r *http.Request, v interface{}) error {
 }
 
 // validateRegisterRequest валидирует данные регистрации
-func validateRegisterRequest(req *models.RegisterRequest) error {
+func validateRegisterRequest(req *model.RegisterRequest) error {
 	if req.Email == "" {
 		return fmt.Errorf("email is required")
 	}
@@ -291,7 +272,7 @@ func validateRegisterRequest(req *models.RegisterRequest) error {
 }
 
 // validateLoginRequest валидирует данные входа
-func validateLoginRequest(req *models.LoginRequest) error {
+func validateLoginRequest(req *model.LoginRequest) error {
 	if req.Email == "" {
 		return fmt.Errorf("email is required")
 	}

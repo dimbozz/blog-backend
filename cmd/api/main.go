@@ -22,7 +22,7 @@ func main() {
 	jwt.InitAuth()
 
 	// TODO: Инициализация подключения к базе данных
-	// Используйте функцию InitDB() из database.go
+	// Используйте функцию InitDB() из db.go
 	if err := postgres.InitDB(); err != nil {
 		log.Fatal("Failed to connect to database:", err)
 	}
@@ -33,7 +33,7 @@ func main() {
 	http.HandleFunc("/register", handlers.RegisterHandler)
 	http.HandleFunc("/login", handlers.LoginHandler)
 	http.HandleFunc("/profile", middleware.AuthMiddleware(handlers.ProfileHandler))
-	http.HandleFunc("/health", handlers.HealthHandler)
+	http.HandleFunc("/health", handlers.HealthHandler(userRepo))
 
 	// Запуск сервера
 	port := config.GetEnv("SERVER_PORT", "8080")

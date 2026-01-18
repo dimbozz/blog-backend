@@ -1,4 +1,4 @@
-package models
+package model
 
 import (
 	"time"
@@ -46,17 +46,17 @@ type Post struct {
 	ID        string    `json:"id"`
 	Title     string    `json:"title"`     // Заголовок поста
 	Content   string    `json:"content"`   // Текст поста
-	AuthorID  string    `json:"author_id"` // ID автора комментария
+	AuthorID  int       `json:"author_id"` // ID автора комментария
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
 type Comment struct {
-	ID        string    `json:"id"`
+	ID        int       `json:"id"`
 	PostID    string    `json:"post_id"`             // Связь с постом
-	AuthorID  string    `json:"author_id"`           // ID автора комментария
+	AuthorID  int       `json:"author_id"`           // ID автора комментария
 	Content   string    `json:"content"`             // Текст комментария
-	ParentID  *string   `json:"parent_id,omitempty"` // ID родительского комментария, nil = корневой комментарий)
+	ParentID  *int      `json:"parent_id,omitempty"` // ID родительского комментария, nil = корневой комментарий)
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }

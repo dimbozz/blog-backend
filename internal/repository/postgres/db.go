@@ -8,8 +8,8 @@ import (
 	_ "github.com/lib/pq"
 )
 
-// Глобальная переменная для подключения к БД
-var Db *sql.DB
+// Переменная для подключения к БД
+var db *sql.DB
 
 // InitDB инициализирует подключение к базе данных
 func InitDB() error {
@@ -34,12 +34,12 @@ func InitDB() error {
 	)
 
 	var err error
-	Db, err = sql.Open("postgres", connStr)
+	db, err = sql.Open("postgres", connStr)
 	if err != nil {
 		return fmt.Errorf("failed to open database: %v", err)
 	}
 
-	if err := Db.Ping(); err != nil {
+	if err := db.Ping(); err != nil {
 		return fmt.Errorf("failed to ping database: %v", err)
 	}
 
@@ -48,7 +48,7 @@ func InitDB() error {
 
 // CloseDB закрывает соединение с базой данных
 func CloseDB() {
-	if Db != nil {
-		Db.Close()
+	if db != nil {
+		db.Close()
 	}
 }
