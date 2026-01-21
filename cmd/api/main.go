@@ -18,21 +18,26 @@ func main() {
 		log.Println("Warning: .env file not found")
 	}
 
+	cfg := config.Load()
+
 	// Инициализация JWT секретного ключа
 	jwt.InitAuth()
 
-	// TODO: Инициализация подключения к базе данных
-	// Используйте функцию InitDB() из db.go
-	if err := postgres.InitDB(); err != nil {
-		log.Fatal("Failed to connect to database:", err)
+	// Инициализация БД с настройками пула (db.go)
+	db, err := postgres.NewDB(cfg) // ← из db.go!
+	if err != nil {
+		log.Fatal(err)
 	}
-	defer postgres.CloseDB()
+	defer db.Close()
+
+	// Создаем экземпляр репозитория (user.go)
+	userRepo := postgres.NewPostgresUserRepository(db)
 
 	// TODO: Настройка HTTP маршрутов
 	// Используйте обработчики из handlers.go
-	http.HandleFunc("/register", handlers.RegisterHandler)
-	http.HandleFunc("/login", handlers.LoginHandler)
-	http.HandleFunc("/profile", middleware.AuthMiddleware(handlers.ProfileHandler))
+	http.HandleFunc("/register", handlers.RegisterHandler(userRepo))
+	http.HandleFunc("/login", handlers.LoginHandler(userRepo))
+	http.HandleFunc("/profile", middleware.AuthMiddleware(handlers.ProfileHandler(userRepo)))
 	http.HandleFunc("/health", handlers.HealthHandler(userRepo))
 
 	// Запуск сервера
