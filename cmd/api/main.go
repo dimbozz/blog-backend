@@ -8,16 +8,10 @@ import (
 	"blog-backend/pkg/jwt"
 	"log"
 	"net/http"
-
-	"github.com/joho/godotenv"
 )
 
 func main() {
 	// Загрузка переменных окружения из .env файла
-	if err := godotenv.Load(); err != nil {
-		log.Println("Warning: .env file not found")
-	}
-
 	cfg := config.Load()
 
 	// Инициализация JWT секретного ключа
