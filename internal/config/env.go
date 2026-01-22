@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 
-	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
 )
 
@@ -30,13 +29,18 @@ type Config struct {
 
 func Load() *Config {
 	// Загружаем .env
-	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file found")
-	}
+	// if err := godotenv.Load(); err != nil {
+	// 	log.Println("No .env file found")
+	// }
 
-	viper.SetConfigName(".env")
+	viper.SetConfigFile(".env")
 	viper.SetConfigType("env")
 	viper.AutomaticEnv()
+
+	// ЧИТАЕМ ФАЙЛ
+	if err := viper.ReadInConfig(); err != nil {
+		log.Fatalf("Error reading .env: %v", err)
+	}
 
 	cfg := &Config{}
 	if err := viper.Unmarshal(cfg); err != nil {
