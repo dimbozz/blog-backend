@@ -24,7 +24,7 @@ func (r *PostgresUserRepository) HealthCheck(ctx context.Context) error {
 	return r.db.PingContext(ctx)
 }
 
-func (r *PostgresUserRepository) FindByID(ctx context.Context, id string) (*model.User, error) {
+func (r *PostgresUserRepository) FindByID(ctx context.Context, id int) (*model.User, error) {
 	query := `SELECT id, email, name, created_at FROM users WHERE id = $1`
 	var user model.User
 	err := r.db.QueryRowContext(ctx, query, id).Scan(

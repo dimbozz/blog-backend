@@ -20,7 +20,7 @@ func RegisterHandler(userRepo *postgres.PostgresUserRepository) http.HandlerFunc
 		}
 		ctx := r.Context()
 
-		// TODO: Реализуйте регистрацию пользователя
+		// Реализуем регистрацию пользователя
 		//
 		// Пошаговый план:
 		// 1. Распарсите JSON из тела запроса в структуру RegisterRequest
