@@ -2,19 +2,11 @@ package middleware
 
 import (
 	"blog-backend/pkg/jwt"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
-
-	// 1. Импортируйте "context" и "strings"
-	"context"
 	"strings"
-)
-
-type contextKey string
-
-const (
-	contextKeyUser = contextKey("user")
 )
 
 // AuthMiddleware проверяет JWT токен и устанавливает контекст пользователя
@@ -72,20 +64,4 @@ func sendAuthError(w http.ResponseWriter, message string) {
 		"error":   "401 Unauthorized",
 		"message": message,
 	})
-}
-
-// GetUserIDFromContext извлекает ID пользователя из контекста
-func GetUserIDFromContext(r *http.Request) (int, bool) {
-	// TODO: Реализуйте извлечение userID из контекста
-	//
-	// Что нужно сделать:
-	// 1. Используйте r.Context().Value("userID")
-	// 2. Проведите type assertion к int
-	// 3. Верните значение и булевый флаг успешности
-	//
-	// Пример: userID, ok := r.Context().Value("userID").(int)
-	userID, ok := r.Context().Value("userID").(int)
-
-	// Возвращаем значение и булевый флаг успешности
-	return userID, ok
 }

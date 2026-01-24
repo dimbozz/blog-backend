@@ -1,9 +1,9 @@
 package handlers
 
 import (
-	"blog-backend/internal/handlers/middleware"
 	"blog-backend/internal/model"
 	"blog-backend/internal/repository/postgres"
+	"blog-backend/pkg/auth"
 	"blog-backend/pkg/jwt"
 	"encoding/json"
 	"fmt"
@@ -200,7 +200,7 @@ func ProfileHandler(userRepo *postgres.PostgresUserRepository) http.HandlerFunc 
 		// - Не включайте password_hash в ответ
 
 		// 1. Получаем userID из контекста
-		userID, ok := middleware.GetUserIDFromContext(r)
+		userID, ok := auth.GetUserIDFromContext(r)
 		if !ok {
 			sendErrorResponse(w, "User ID not found in context", http.StatusInternalServerError)
 			return
