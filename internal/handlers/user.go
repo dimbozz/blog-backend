@@ -188,8 +188,6 @@ func ProfileHandler(userRepo *postgres.PostgresUserRepository) http.HandlerFunc 
 
 		ctx := r.Context()
 
-		
-
 		// Получаем userID из контекста
 		// Контекст уже должен содержать userID
 		userID, ok := auth.GetUserIDFromContext(r)
