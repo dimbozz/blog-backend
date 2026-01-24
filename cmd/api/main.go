@@ -29,18 +29,18 @@ func main() {
 
 	// TODO: Настройка HTTP маршрутов
 	// Используйте обработчики из handlers.go
-	http.HandleFunc("/register", handlers.RegisterHandler(userRepo))
-	http.HandleFunc("/login", handlers.LoginHandler(userRepo))
-	http.HandleFunc("/profile", middleware.AuthMiddleware(handlers.ProfileHandler(userRepo)))
-	http.HandleFunc("/health", handlers.HealthHandler(userRepo))
+	http.HandleFunc("/api/register", handlers.RegisterHandler(userRepo))
+	http.HandleFunc("/api/login", handlers.LoginHandler(userRepo))
+	http.HandleFunc("api/profile", middleware.AuthMiddleware(handlers.ProfileHandler(userRepo)))
+	http.HandleFunc("/api/health", handlers.HealthHandler(userRepo))
 
 	// Запуск сервера
 	port := config.GetEnv("SERVER_PORT", "8080")
 	log.Printf("🚀 Server starting on port %s", port)
-	log.Printf("📝 Register: POST http://localhost:%s/register", port)
-	log.Printf("🔐 Login: POST http://localhost:%s/login", port)
-	log.Printf("👤 Profile: GET http://localhost:%s/profile (requires token)", port)
-	log.Printf("❤️  Health: GET http://localhost:%s/health", port)
+	log.Printf("📝 Register: POST http://localhost:%s/api/register", port)
+	log.Printf("🔐 Login: POST http://localhost:%s/api/login", port)
+	log.Printf("👤 Profile: GET http://localhost:%s/api/profile (requires token)", port)
+	log.Printf("❤️  Health: GET http://localhost:%s/api/health", port)
 
 	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
