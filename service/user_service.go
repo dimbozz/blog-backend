@@ -19,11 +19,12 @@ func NewUserService(ur repository.UserRepository) *UserService {
 
 // CreateUser создает нового пользователя
 func (s *UserService) CreateUser(ctx context.Context, email, username, passwordHash string) (*model.User, error) {
-	user := &model.User{
-		Email:        email,
-		Username:     username,
-		PasswordHash: passwordHash,
-	}
+    // 1. Создаем объект user
+    user := &model.User{
+        Email:        email,
+        Username:     username,
+        PasswordHash: passwordHash,
+    }
 
 	if err := s.userRepo.CreateUser(ctx, email, user, passwordHash); err != nil {
 		return nil, fmt.Errorf("failed to create user: %w", err)

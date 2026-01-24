@@ -23,6 +23,6 @@ type PostRepository interface {
 // UserRepository — интерфейс для работы с пользователями
 type UserRepository interface {
 	FindByID(ctx context.Context, id int) (*model.User, error)
-	FindByEmail(ctx context.Context, email string) (*model.User, error)
+	GetUserByEmail(ctx context.Context, email string) (*model.User, error)
 	CreateUser(ctx context.Context, email string, user *model.User, passwordHash string) error
 }
