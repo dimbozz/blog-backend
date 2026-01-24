@@ -12,32 +12,26 @@ import (
 // AuthMiddleware проверяет JWT токен и устанавливает контекст пользователя
 func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// TODO: Реализуйте проверку JWT токена
-		// Используйте:
-		// - r.Header.Get("Authorization")
-		// - strings.TrimPrefix(authHeader, "Bearer ")
-		// - context.WithValue(r.Context(), "userID", claims.UserID)
-		// - next.ServeHTTP(w, r.WithContext(ctx))
 
-		// 2. Получаем заголовок Authorization из запроса
-		// 3. Проверяем, что заголовок не пустой
+		// Получаем заголовок Authorization из запроса
+		// Проверяем, что заголовок не пустой
 		authHeader := r.Header.Get("Authorization")
 		if authHeader == "" {
 			sendAuthError(w, "Authorization header missing")
 			return
 		}
 
-		// 4. Проверяем формат "Bearer <token>"
+		// Проверяем формат "Bearer <token>"
 		const bearerPrefix = "Bearer "
 		if !strings.HasPrefix(authHeader, bearerPrefix) {
 			sendAuthError(w, "Invalid authorization header format")
 			return
 		}
 
-		// 4. Извлекаем токен
+		// Извлекаем токен
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
 
-		// 5. Валидируем токен с помощью ValidateToken() из auth.go
+		// Валидируем токен с помощью ValidateToken() из auth.go
 		claims, err := jwt.ValidateToken(tokenString)
 		if err != nil {
 			sendAuthError(w, fmt.Sprintf("Invalid token: %v", err))
