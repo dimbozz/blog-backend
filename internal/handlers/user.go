@@ -178,6 +178,7 @@ func LoginHandler(userRepo *postgres.PostgresUserRepository) http.HandlerFunc {
 }
 
 // ProfileHandler возвращает профиль текущего пользователя
+// Этот обработчик вызывается только после AuthMiddleware
 func ProfileHandler(userRepo *postgres.PostgresUserRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
@@ -186,45 +187,38 @@ func ProfileHandler(userRepo *postgres.PostgresUserRepository) http.HandlerFunc 
 		}
 
 		ctx := r.Context()
-		// TODO: Реализуйте получение профиля пользователя
-		//
-		// Пошаговый план:
-		// 1. Получите ID пользователя из контекста с помощью GetUserIDFromContext()
-		// 2. Загрузите данные пользователя из БД с помощью GetUserByID()
-		// 3. Верните данные пользователя в JSON формате
-		//
-		// Примечания:
-		// - Этот обработчик вызывается только после AuthMiddleware
-		// - Контекст уже должен содержать userID
-		// - Если пользователь не найден - верните 404
-		// - Не включайте password_hash в ответ
 
-		// 1. Получаем userID из контекста
+		
+
+		// Получаем userID из контекста
+		// Контекст уже должен содержать userID
 		userID, ok := auth.GetUserIDFromContext(r)
 		if !ok {
 			sendErrorResponse(w, "User ID not found in context", http.StatusInternalServerError)
 			return
 		}
 
-		// 2. Загружаем пользователя
+		// Загружаем данные пользователя из БД с помощью GetUserByID()
 		user, err := userRepo.GetUserByID(ctx, userID)
 		if err != nil {
 			log.Printf("Database error: %v", err)
 			sendErrorResponse(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
+		// Если пользователь не найден - возвращаем 404
 		if user == nil {
 			sendErrorResponse(w, "User not found", http.StatusNotFound)
 			return
 		}
 
-		// 3. Отправляем профиль (без password_hash)
+		// Отправляем профиль (без password_hash)
 		response := map[string]interface{}{
 			"id":         user.ID,
 			"email":      user.Email,
 			"username":   user.Username,
 			"created_at": user.CreatedAt,
 		}
+		// Возвращаем данные пользователя в JSON формате
 		sendJSONResponse(w, response, http.StatusOK)
 	}
 }
@@ -272,7 +266,7 @@ func validateRegisterRequest(req *model.RegisterRequest) error {
 		return fmt.Errorf("password is required")
 	}
 
-	// TODO: Добавьте дополнительные проверки
+	// TODO: Добавить дополнительные проверки
 	// - Используйте ValidateEmail() и ValidatePassword() из auth.go
 	// - Проверьте длину username (например, минимум 3 символа)
 	// - Проверьте что username содержит только допустимые символы
