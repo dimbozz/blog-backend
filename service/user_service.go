@@ -25,7 +25,7 @@ func (s *UserService) CreateUser(ctx context.Context, email, username, passwordH
 		PasswordHash: passwordHash,
 	}
 
-	if err := s.userRepo.Create(ctx, user); err != nil {
+	if err := s.userRepo.CreateUser(ctx, email, user, passwordHash); err != nil {
 		return nil, fmt.Errorf("failed to create user: %w", err)
 	}
 
