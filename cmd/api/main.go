@@ -24,13 +24,19 @@ func main() {
 	}
 	defer db.Close()
 
-	// Создаём слои снизу вверх
-	// Создаем экземпляр репозитория (user.go)
+	// Создаём слои снизу вверх (Repository → Service → Handler)
+	// Каждый слой зависит только от интерфейса предыдущего
+
+	// 1. Repository - уровень доступа к БД (конкретная реализация postgres)
 	userRepo := postgres.NewPostgresUserRepository(db)
+
+	// 2. Service - уровень бизнес-логики (зависит от интерфейса Repository)
 	userService := service.NewUserService(userRepo)
+
+	// 3. Handler - уровень HTTP (зависит от Service)
 	userHandler := handlers.NewUserHandler(userService)
-	// TODO: Настройка HTTP маршрутов
-	// Используйте обработчики из handlers.go
+
+	// Настройка HTTP маршрутов
 	http.HandleFunc("/api/register", userHandler.RegisterHandler)
 	http.HandleFunc("/api/login", userHandler.LoginHandler)
 	// http.HandleFunc("api/profile", middleware.AuthMiddleware(handlers.ProfileHandler(userRepo)))

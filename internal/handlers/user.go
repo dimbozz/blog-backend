@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"blog-backend/internal/model"
+	"blog-backend/pkg/auth"
 	"blog-backend/pkg/jwt"
 	"blog-backend/service"
 	"encoding/json"
@@ -159,49 +160,47 @@ func (h *UserHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	sendJSONResponse(w, response, http.StatusOK)
 }
 
-// // ProfileHandler возвращает профиль текущего пользователя
-// // Этот обработчик вызывается только после AuthMiddleware
-// func ProfileHandler(userRepo *postgres.PostgresUserRepository) http.HandlerFunc {
-// 	return func(w http.ResponseWriter, r *http.Request) {
-// 		if r.Method != http.MethodGet {
-// 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-// 			return
-// 		}
+// ProfileHandler возвращает профиль текущего пользователя
+// Этот обработчик вызывается только после AuthMiddleware
+func (h *UserHandler) ProfileHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
 
-// 		ctx := r.Context()
+	ctx := r.Context()
 
-// 		// Получаем userID из контекста
-// 		// Контекст уже должен содержать userID
-// 		userID, ok := auth.GetUserIDFromContext(r)
-// 		if !ok {
-// 			sendErrorResponse(w, "User ID not found in context", http.StatusInternalServerError)
-// 			return
-// 		}
+	// Получаем userID из контекста
+	// Контекст уже должен содержать userID
+	userID, ok := auth.GetUserIDFromContext(r)
+	if !ok {
+		sendErrorResponse(w, "User ID not found in context", http.StatusInternalServerError)
+		return
+	}
 
-// 		// Загружаем данные пользователя из БД с помощью GetUserByID()
-// 		user, err := userRepo.GetUserByID(ctx, userID)
-// 		if err != nil {
-// 			log.Printf("Database error: %v", err)
-// 			sendErrorResponse(w, "Internal server error", http.StatusInternalServerError)
-// 			return
-// 		}
-// 		// Если пользователь не найден - возвращаем 404
-// 		if user == nil {
-// 			sendErrorResponse(w, "User not found", http.StatusNotFound)
-// 			return
-// 		}
+	// Загружаем данные пользователя из БД с помощью GetUserByID()
+	user, err := h.userService.GetUserByID(ctx, userID)
+	if err != nil {
+		log.Printf("Database error: %v", err)
+		sendErrorResponse(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	// Если пользователь не найден - возвращаем 404
+	if user == nil {
+		sendErrorResponse(w, "User not found", http.StatusNotFound)
+		return
+	}
 
-// 		// Отправляем профиль (без password_hash)
-// 		response := map[string]interface{}{
-// 			"id":         user.ID,
-// 			"email":      user.Email,
-// 			"username":   user.Username,
-// 			"created_at": user.CreatedAt,
-// 		}
-// 		// Возвращаем данные пользователя в JSON формате
-// 		sendJSONResponse(w, response, http.StatusOK)
-// 	}
-// }
+	// Отправляем профиль (без password_hash)
+	response := map[string]interface{}{
+		"id":         user.ID,
+		"email":      user.Email,
+		"username":   user.Username,
+		"created_at": user.CreatedAt,
+	}
+	// Возвращаем данные пользователя в JSON формате
+	sendJSONResponse(w, response, http.StatusOK)
+}
 
 // sendJSONResponse отправляет JSON ответ (вспомогательная функция)
 func sendJSONResponse(w http.ResponseWriter, data interface{}, statusCode int) {
