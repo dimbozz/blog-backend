@@ -3,6 +3,7 @@ package main
 import (
 	"blog-backend/internal/config"
 	"blog-backend/internal/handlers"
+	"blog-backend/internal/handlers/middleware"
 	"blog-backend/internal/repository/postgres"
 	"blog-backend/pkg/jwt"
 	"blog-backend/service"
@@ -39,7 +40,7 @@ func main() {
 	// Настройка HTTP маршрутов
 	http.HandleFunc("/api/register", userHandler.RegisterHandler)
 	http.HandleFunc("/api/login", userHandler.LoginHandler)
-	// http.HandleFunc("api/profile", middleware.AuthMiddleware(handlers.ProfileHandler(userRepo)))
+	http.HandleFunc("api/profile", middleware.AuthMiddleware(userHandler.ProfileHandler))
 	http.HandleFunc("/api/health", handlers.HealthHandler(userRepo))
 
 	// Запуск сервера
