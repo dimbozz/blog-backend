@@ -3,9 +3,9 @@ package main
 import (
 	"blog-backend/internal/config"
 	"blog-backend/internal/handlers"
-	"blog-backend/internal/handlers/middleware"
 	"blog-backend/internal/repository/postgres"
 	"blog-backend/pkg/jwt"
+	"blog-backend/service"
 	"log"
 	"net/http"
 )
@@ -24,14 +24,16 @@ func main() {
 	}
 	defer db.Close()
 
+	// Создаём слои снизу вверх
 	// Создаем экземпляр репозитория (user.go)
 	userRepo := postgres.NewPostgresUserRepository(db)
-
+	userService := service.NewUserService(userRepo)
+	userHandler := handlers.NewUserHandler(userService)
 	// TODO: Настройка HTTP маршрутов
 	// Используйте обработчики из handlers.go
-	http.HandleFunc("/api/register", handlers.RegisterHandler(userRepo))
-	http.HandleFunc("/api/login", handlers.LoginHandler(userRepo))
-	http.HandleFunc("api/profile", middleware.AuthMiddleware(handlers.ProfileHandler(userRepo)))
+	http.HandleFunc("/api/register", userHandler.RegisterHandler)
+	// http.HandleFunc("/api/login", handlers.LoginHandler(userRepo))
+	// http.HandleFunc("api/profile", middleware.AuthMiddleware(handlers.ProfileHandler(userRepo)))
 	http.HandleFunc("/api/health", handlers.HealthHandler(userRepo))
 
 	// Запуск сервера
