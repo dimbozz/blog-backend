@@ -26,7 +26,7 @@ func NewPostService(pr repository.PostRepository, ur repository.UserRepository) 
 
 func (s *PostService) CreatePost(ctx context.Context, userID int, req CreatePostRequest) (*model.Post, error) {
 	// Проверяем, существует ли пользователь
-	user, err := s.userRepo.FindByID(ctx, userID)
+	user, err := s.userRepo.GetUserByID(ctx, userID)
 	if err != nil {
 		return nil, ErrUserNotFound
 	}

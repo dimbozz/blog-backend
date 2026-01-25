@@ -22,13 +22,6 @@ func NewUserHandler(userService *service.UserService) *UserHandler {
 	}
 }
 
-// CreateUserRequest для парсинга JSON
-type CreateUserRequest struct {
-	Email    string `json:"email"`
-	Username string `json:"username"`
-	Password string `json:"password"`
-}
-
 // RegisterHandler обрабатывает регистрацию нового пользователя
 func (h *UserHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	// Только POST
@@ -116,83 +109,81 @@ func (h *UserHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	sendJSONResponse(w, response, http.StatusCreated)
 }
 
-// // LoginHandler обрабатывает вход пользователя
-// func LoginHandler(userRepo *postgres.PostgresUserRepository) http.HandlerFunc {
-// 	return func(w http.ResponseWriter, r *http.Request) {
-// 		if r.Method != http.MethodPost {
-// 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-// 			return
-// 		}
+// LoginHandler обрабатывает вход пользователя
+func (h *UserHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
 
-// 		ctx := r.Context()
-// 		// TODO: Реализуйте авторизацию пользователя
-// 		//
-// 		// Пошаговый план:
-// 		// 1. Распарсите JSON из тела запроса в структуру LoginRequest
-// 		// 2. Проведите базовую валидацию (email и password не пустые)
-// 		// 3. Найдите пользователя по email с помощью GetUserByEmail()
-// 		// 4. Проверьте пароль с помощью CheckPassword()
-// 		// 5. Сгенерируйте JWT токен с помощью GenerateToken()
-// 		// 6. Верните ответ с токеном и данными пользователя
-// 		//
-// 		// Важные моменты безопасности:
-// 		// - При неверном email или пароле возвращайте одинаковое сообщение
-// 		//   "Invalid email or password" чтобы не раскрывать существование email
-// 		// - Используйте HTTP статус 401 для неверных учетных данных
-// 		// - Не возвращайте password_hash в ответе
+	ctx := r.Context()
+	// TODO: Реализуйте авторизацию пользователя
+	//
+	// Пошаговый план:
+	// 1. Распарсите JSON из тела запроса в структуру LoginRequest
+	// 2. Проведите базовую валидацию (email и password не пустые)
+	// 3. Найдите пользователя по email с помощью GetUserByEmail()
+	// 4. Проверьте пароль с помощью CheckPassword()
+	// 5. Сгенерируйте JWT токен с помощью GenerateToken()
+	// 6. Верните ответ с токеном и данными пользователя
+	//
+	// Важные моменты безопасности:
+	// - При неверном email или пароле возвращайте одинаковое сообщение
+	//   "Invalid email or password" чтобы не раскрывать существование email
+	// - Используйте HTTP статус 401 для неверных учетных данных
+	// - Не возвращайте password_hash в ответе
 
-// 		// 1. Парсим JSON
-// 		var req model.LoginRequest
-// 		if err := parseJSONRequest(r, &req); err != nil {
-// 			sendErrorResponse(w, "Invalid JSON", http.StatusBadRequest)
-// 			return
-// 		}
+	// 1. Парсим JSON
+	var req model.LoginRequest
+	if err := parseJSONRequest(r, &req); err != nil {
+		sendErrorResponse(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
 
-// 		// 2. Валидация
-// 		if err := validateLoginRequest(&req); err != nil {
-// 			sendErrorResponse(w, err.Error(), http.StatusBadRequest)
-// 			return
-// 		}
+	// 2. Валидация
+	if err := validateLoginRequest(&req); err != nil {
+		sendErrorResponse(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
-// 		// 3. Находим пользователя
-// 		user, err := userRepo.GetUserByEmail(ctx, req.Email)
-// 		if err != nil {
-// 			log.Printf("Database error: %v", err)
-// 			sendErrorResponse(w, "Invalid email or password", http.StatusUnauthorized)
-// 			return
-// 		}
-// 		if user == nil {
-// 			sendErrorResponse(w, "Invalid email or password", http.StatusUnauthorized)
-// 			return
-// 		}
+	// 3. Находим пользователя
+	user, err := h.userService.GetUserByEmail(ctx, req.Email)
+	if err != nil {
+		log.Printf("Database error: %v", err)
+		sendErrorResponse(w, "Invalid email or password", http.StatusUnauthorized)
+		return
+	}
+	if user == nil {
+		sendErrorResponse(w, "Invalid email or password", http.StatusUnauthorized)
+		return
+	}
 
-// 		// 4. Проверяем пароль
-// 		if !jwt.CheckPassword(req.Password, user.PasswordHash) {
-// 			sendErrorResponse(w, "Invalid email or password", http.StatusUnauthorized)
-// 			return
-// 		}
+	// 4. Проверяем пароль
+	if !jwt.CheckPassword(req.Password, user.PasswordHash) {
+		sendErrorResponse(w, "Invalid email or password", http.StatusUnauthorized)
+		return
+	}
 
-// 		// 5. Генерируем токен
-// 		token, err := jwt.GenerateToken(*user)
-// 		if err != nil {
-// 			log.Printf("Generate token error: %v", err)
-// 			sendErrorResponse(w, "Internal server error", http.StatusInternalServerError)
-// 			return
-// 		}
+	// 5. Генерируем токен
+	token, err := jwt.GenerateToken(*user)
+	if err != nil {
+		log.Printf("Generate token error: %v", err)
+		sendErrorResponse(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
 
-// 		// 6. Успешный ответ
-// 		response := map[string]interface{}{
-// 			"message": "Login successful",
-// 			"user": map[string]interface{}{
-// 				"id":       user.ID,
-// 				"email":    user.Email,
-// 				"username": user.Username,
-// 			},
-// 			"token": token,
-// 		}
-// 		sendJSONResponse(w, response, http.StatusOK)
-// 	}
-// }
+	// 6. Успешный ответ
+	response := map[string]interface{}{
+		"message": "Login successful",
+		"user": map[string]interface{}{
+			"id":       user.ID,
+			"email":    user.Email,
+			"username": user.Username,
+		},
+		"token": token,
+	}
+	sendJSONResponse(w, response, http.StatusOK)
+}
 
 // // ProfileHandler возвращает профиль текущего пользователя
 // // Этот обработчик вызывается только после AuthMiddleware

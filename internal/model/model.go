@@ -22,6 +22,13 @@ type RegisterRequest struct {
 	Password string `json:"password"`
 }
 
+// CreateUserRequest для парсинга JSON
+type CreateUserRequest struct {
+	Email    string `json:"email"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
 // LoginRequest структура для запроса входа
 type LoginRequest struct {
 	Email    string `json:"email"`

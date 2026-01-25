@@ -155,7 +155,7 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 go run *.go
 
 # В другом терминале тестируйте API
-curl -X POST http://localhost:8080/register \
+curl -X POST http://localhost:8080/api/register \
   -H "Content-Type: application/json" \
   -d '{"email":"user@example.com","username":"testuser","password":"SecurePass123"}'
 ```
@@ -164,12 +164,12 @@ curl -X POST http://localhost:8080/register \
 
 ### 1. Проверка здоровья сервиса
 ```bash
-curl http://localhost:8080/health
+curl http://localhost:8080/api/health
 ```
 
 ### 2. Регистрация пользователя
 ```bash
-curl -X POST http://localhost:8080/register \
+curl -X POST http://localhost:8080/api/register \
   -H "Content-Type: application/json" \
   -d '{
     "email": "user@example.com",
@@ -180,7 +180,7 @@ curl -X POST http://localhost:8080/register \
 
 ### 3. Вход в систему
 ```bash
-curl -X POST http://localhost:8080/login \
+curl -X POST http://localhost:8080/api/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "user@example.com",
@@ -191,7 +191,7 @@ curl -X POST http://localhost:8080/login \
 ### 4. Получение профиля (с токеном)
 ```bash
 # Замените YOUR_JWT_TOKEN на токен из ответа /login
-curl http://localhost:8080/profile \
+curl http://localhost:8080/api/profile \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
@@ -263,16 +263,16 @@ http.HandleFunc("/profile", AuthMiddleware(ProfileHandler))
 
 ## ✅ Чек-лист
 
-- [x] PostgreSQL запускается через `docker-compose up`
-- [x] Приложение подключается к БД и не падает
-- [x] Регистрация создает пользователя в БД
-- [x] Пароли хранятся как bcrypt хеш, НЕ в открытом виде
-- [x] Вход возвращает валидный JWT токен
-- [x] Токен можно декодировать на https://jwt.io
-- [x] Эндпоинт `/profile` требует токен (без токена → 401)
-- [x] Эндпоинт `/profile` работает с правильным токеном
-- [x] **ВСЕ** SQL запросы используют параметры `$1, $2...`
-- [x] В коде НЕТ `fmt.Sprintf` для построения SQL
+- [ ] PostgreSQL запускается через `docker-compose up`
+- [ ] Приложение подключается к БД и не падает
+- [ ] Регистрация создает пользователя в БД
+- [ ] Пароли хранятся как bcrypt хеш, НЕ в открытом виде
+- [ ] Вход возвращает валидный JWT токен
+- [ ] Токен можно декодировать на https://jwt.io
+- [ ] Эндпоинт `/profile` требует токен (без токена → 401)
+- [ ] Эндпоинт `/profile` работает с правильным токеном
+- [ ] **ВСЕ** SQL запросы используют параметры `$1, $2...`
+- [ ] В коде НЕТ `fmt.Sprintf` для построения SQL
 
 ## 🔍 Проверка безопасности
 
