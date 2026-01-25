@@ -36,7 +36,7 @@ func (s *PostService) CreatePost(ctx context.Context, currentUserID int, post *m
 	return s.postRepo.CreatePost(ctx, post)
 }
 
-// ✅ Получает пост по ID (для всех)
+// Получаем пост по ID (для всех)
 func (s *PostService) GetPost(ctx context.Context, id int) (*model.Post, error) {
 	return s.postRepo.GetPostByID(ctx, id)
 }
