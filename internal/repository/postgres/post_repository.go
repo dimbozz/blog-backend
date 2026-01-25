@@ -22,20 +22,20 @@ func NewPostgresPostRepository(db *sql.DB) *PostgresPostRepository {
 func (r *PostgresPostRepository) CreatePost(ctx context.Context, post *model.Post) (*model.Post, error) {
 	// INSERT с RETURNING возвращает все поля созданной записи
 	query := `
-        INSERT INTO posts (user_id, title, content) 
+        INSERT INTO posts (author_id, title, content) 
         VALUES ($1, $2, $3) 
-        RETURNING id, user_id, title, content, created_at, updated_at`
+        RETURNING id, author_id, title, content, created_at, updated_at`
 
 	// Инициализируем структуру createdPost
 	createdPost := &model.Post{}
 
-	// Выполняем INSERT, передаем только данные (user_id, title, content)
-	row := r.db.QueryRowContext(ctx, query, post.UserID, post.Title, post.Content)
+	// Выполняем INSERT, передаем только данные (author_id, title, content)
+	row := r.db.QueryRowContext(ctx, query, post.AuthorID, post.Title, post.Content)
 
 	// БД заполняет все поля (ID генерируется автоматически)
 	err := row.Scan(
 		&createdPost.ID,        // Автогенерированный ID
-		&createdPost.UserID,    // Из параметров INSERT
+		&createdPost.AuthorID,    // Из параметров INSERT
 		&createdPost.Title,     // Из параметров INSERT
 		&createdPost.Content,   // Из параметров INSERT
 		&createdPost.CreatedAt, // CURRENT_TIMESTAMP
@@ -57,7 +57,7 @@ func (r *PostgresPostRepository) GetPostByID(ctx context.Context, id int) (*mode
 
 	// SELECT одной записи по первичному ключу
 	query := `
-        SELECT id, user_id, title, content, created_at, updated_at 
+        SELECT id, author_id, title, content, created_at, updated_at 
         FROM posts 
         WHERE id = $1`
 
@@ -67,7 +67,7 @@ func (r *PostgresPostRepository) GetPostByID(ctx context.Context, id int) (*mode
 	// Заполняем структуру данными из БД
 	err := row.Scan(
 		&post.ID,
-		&post.UserID,
+		&post.AuthorID,
 		&post.Title,
 		&post.Content,
 		&post.CreatedAt,
@@ -92,7 +92,7 @@ func (r *PostgresPostRepository) UpdatePost(ctx context.Context, id int, post *m
         UPDATE posts 
         SET title = $1, content = $2, updated_at = CURRENT_TIMESTAMP
         WHERE id = $3
-        RETURNING id, user_id, title, content, created_at, updated_at`
+        RETURNING id, author_id, title, content, created_at, updated_at`
 
 	// Инициализируем структуру post
 	updatedPost := &model.Post{}
@@ -103,7 +103,7 @@ func (r *PostgresPostRepository) UpdatePost(ctx context.Context, id int, post *m
 	// Заполняем структуру данными из БД
 	err := row.Scan(
 		&updatedPost.ID,
-		&updatedPost.UserID,
+		&updatedPost.AuthorID,
 		&updatedPost.Title,
 		&updatedPost.Content,
 		&updatedPost.CreatedAt,
@@ -140,7 +140,7 @@ func (r *PostgresPostRepository) DeletePost(ctx context.Context, id int) error {
 // Возвращаем список постов с пагинацией (limit/offset)
 func (r *PostgresPostRepository) ListPosts(ctx context.Context, limit, offset int) ([]*model.Post, error) {
 	query := `
-        SELECT id, user_id, title, content, created_at, updated_at
+        SELECT id, author_id, title, content, created_at, updated_at
         FROM posts 
         ORDER BY created_at DESC 
         LIMIT $1 OFFSET $2`
@@ -155,7 +155,7 @@ func (r *PostgresPostRepository) ListPosts(ctx context.Context, limit, offset in
 	for rows.Next() {
 		post := &model.Post{}
 		// Сканируем каждую строку результата
-		if err := rows.Scan(&post.ID, &post.UserID, &post.Title, &post.Content,
+		if err := rows.Scan(&post.ID, &post.AuthorID, &post.Title, &post.Content,
 			&post.CreatedAt, &post.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("failed to scan post: %w", err)
 		}
@@ -178,9 +178,9 @@ func (r *PostgresPostRepository) CountPosts(ctx context.Context) (int, error) {
 // Список постов конкретного пользователя с пагинацией
 func (r *PostgresPostRepository) ListPostsByUser(ctx context.Context, userID, limit, offset int) ([]*model.Post, error) {
 	query := `
-        SELECT id, user_id, title, content, created_at, updated_at
+        SELECT id, author_id, title, content, created_at, updated_at
         FROM posts 
-        WHERE user_id = $1
+        WHERE author_id = $1
         ORDER BY created_at DESC 
         LIMIT $2 OFFSET $3`
 
@@ -193,7 +193,7 @@ func (r *PostgresPostRepository) ListPostsByUser(ctx context.Context, userID, li
 	var posts []*model.Post
 	for rows.Next() {
 		post := &model.Post{}
-		if err := rows.Scan(&post.ID, &post.UserID, &post.Title, &post.Content,
+		if err := rows.Scan(&post.ID, &post.AuthorID, &post.Title, &post.Content,
 			&post.CreatedAt, &post.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("failed to scan post: %w", err)
 		}

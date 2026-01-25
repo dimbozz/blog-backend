@@ -51,9 +51,9 @@ type Claims struct {
 
 type Post struct {
 	ID        int       `json:"id"`
-	Title     string    `json:"title"`   // Заголовок поста
-	Content   string    `json:"content"` // Текст поста
-	UserID    int       `json:"user_id"` // ID автора комментария
+	Title     string    `json:"title"`     // Заголовок поста
+	Content   string    `json:"content"`   // Текст поста
+	AuthorID  int       `json:"author_id"` // ID автора комментария
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
@@ -66,4 +66,32 @@ type Comment struct {
 	ParentID  *int      `json:"parent_id,omitempty"` // ID родительского комментария, nil = корневой комментарий)
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// DTO для создания поста (без ID, created_at, updated_at)
+type CreatePostRequest struct {
+	Title   string `json:"title" validate:"required,max=255"`
+	Content string `json:"content" validate:"required,max=5000"`
+}
+
+// DTO для обновления поста (опциональные поля)
+type UpdatePostRequest struct {
+	Title   *string `json:"title" validate:"omitempty,max=255"`
+	Content *string `json:"content" validate:"omitempty,max=5000"`
+}
+
+// DTO для ответа (полная информация)
+type PostResponse struct {
+	ID        string    `json:"id"`
+	Title     string    `json:"title"`
+	Content   string    `json:"content"`
+	UserID    int       `json:"user_id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// DTO для списка постов
+type ListPostsResponse struct {
+	Posts []*PostResponse `json:"posts"`
+	Total int             `json:"total"`
 }

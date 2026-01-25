@@ -16,7 +16,7 @@ type PostRepository interface {
 	// CRUD
 	CreatePost(ctx context.Context, post *model.Post) (*model.Post, error)
 	GetPostByID(ctx context.Context, id int) (*model.Post, error)
-	UpdatePost(ctx context.Context, id int, post *model.Post) error
+	UpdatePost(ctx context.Context, id int, post *model.Post) (*model.Post, error)
 	DeletePost(ctx context.Context, id int) error
 
 	// Список + пагинация
