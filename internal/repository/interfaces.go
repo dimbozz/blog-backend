@@ -13,11 +13,18 @@ type HealthChecker interface {
 
 // PostRepository — интерфейс для работы с постами
 type PostRepository interface {
-	Create(ctx context.Context, post *model.Post) error
-	GetByID(ctx context.Context, id int) (*model.Post, error)
-	GetAll(ctx context.Context, limit, offset int) ([]*model.Post, error)
-	Update(ctx context.Context, post *model.Post) error
-	Delete(ctx context.Context, id int) error
+	// CRUD
+	CreatePost(ctx context.Context, post *model.Post) (*model.Post, error)
+	GetPostByID(ctx context.Context, id int) (*model.Post, error)
+	UpdatePost(ctx context.Context, id int, post *model.Post) error
+	DeletePost(ctx context.Context, id int) error
+
+	// Список + пагинация
+	ListPosts(ctx context.Context, limit, offset int) ([]*model.Post, error)
+	CountPosts(ctx context.Context) (int, error)
+
+	// По автору
+	ListPostsByUser(ctx context.Context, userID int, limit, offset int) ([]*model.Post, error)
 }
 
 // UserRepository — интерфейс для работы с пользователями

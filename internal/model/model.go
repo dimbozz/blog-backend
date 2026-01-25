@@ -50,10 +50,10 @@ type Claims struct {
 }
 
 type Post struct {
-	ID        string    `json:"id"`
-	Title     string    `json:"title"`     // Заголовок поста
-	Content   string    `json:"content"`   // Текст поста
-	AuthorID  int       `json:"author_id"` // ID автора комментария
+	ID        int       `json:"id"`
+	Title     string    `json:"title"`   // Заголовок поста
+	Content   string    `json:"content"` // Текст поста
+	UserID    int       `json:"user_id"` // ID автора комментария
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
