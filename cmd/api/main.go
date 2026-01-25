@@ -32,7 +32,7 @@ func main() {
 	// TODO: Настройка HTTP маршрутов
 	// Используйте обработчики из handlers.go
 	http.HandleFunc("/api/register", userHandler.RegisterHandler)
-	// http.HandleFunc("/api/login", handlers.LoginHandler(userRepo))
+	http.HandleFunc("/api/login", userHandler.LoginHandler)
 	// http.HandleFunc("api/profile", middleware.AuthMiddleware(handlers.ProfileHandler(userRepo)))
 	http.HandleFunc("/api/health", handlers.HealthHandler(userRepo))
 
