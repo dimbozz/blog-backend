@@ -44,13 +44,13 @@ COMMENT ON COLUMN users.password_hash IS 'Хеш пароля (bcrypt)';
 COMMENT ON COLUMN users.created_at IS 'Дата и время регистрации';
 
 COMMENT ON TABLE posts IS 'Таблица постов блога';
-COMMENT ON COLUMN posts.user_id IS 'ID автора поста (FK → users)';
+COMMENT ON COLUMN posts.author_id IS 'ID автора поста (внешниий ключ → users)';
 COMMENT ON COLUMN posts.title IS 'Заголовок поста';
 COMMENT ON COLUMN posts.content IS 'Содержимое поста';
 
 COMMENT ON TABLE comments IS 'Таблица комментариев к постам';
-COMMENT ON COLUMN comments.post_id IS 'ID поста (FK → posts)';
-COMMENT ON COLUMN comments.user_id IS 'ID автора комментария (FK → users)';
+COMMENT ON COLUMN comments.post_id IS 'ID поста (внешниий ключ → posts)';
+COMMENT ON COLUMN comments.author_id IS 'ID автора комментария (внешниий ключ → users)';
 COMMENT ON COLUMN comments.content IS 'Текст комментария';
 
 -- Проверка создания таблиц
