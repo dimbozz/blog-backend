@@ -81,7 +81,7 @@ func (h *UserHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 5. Создаем пользователя
-	token, user, err := h.userService.CreateUser(ctx, req.Email, req.Username, passwordHash)
+	user, token, err := h.userService.CreateUser(ctx, req.Email, req.Username, passwordHash)
 	if err != nil {
 		log.Printf("Create user error: %v", err)
 		sendErrorResponse(w, "Failed to create user", http.StatusInternalServerError)
@@ -139,7 +139,7 @@ func (h *UserHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 3. Вызываем сервис
-	token, user, err := h.userService.Login(ctx, req.Email, req.Password)
+	user, token, err := h.userService.Login(ctx, req.Email, req.Password)
 	if err != nil {
 		log.Printf("Login error: %v", err)
 		http.Error(w, "Invalid email or password", http.StatusUnauthorized)
