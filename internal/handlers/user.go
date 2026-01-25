@@ -82,7 +82,7 @@ func (h *UserHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 5. Создаем пользователя
-	user, token, err := h.userService.CreateUser(ctx, req.Email, req.Username, passwordHash)
+	user, token, err := h.userService.Register(ctx, req.Email, req.Username, passwordHash)
 	if err != nil {
 		log.Printf("Create user error: %v", err)
 		sendErrorResponse(w, "Failed to create user", http.StatusInternalServerError)

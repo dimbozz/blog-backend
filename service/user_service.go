@@ -18,8 +18,8 @@ func NewUserService(ur repository.UserRepository) *UserService {
 	}
 }
 
-// CreateUser создает нового пользователя и возвращает токен
-func (s *UserService) CreateUser(ctx context.Context, email, username, passwordHash string) (*model.User, string, error) {
+// Register создает нового пользователя и возвращает токен
+func (s *UserService) Register(ctx context.Context, email, username, passwordHash string) (*model.User, string, error) {
 
 	user, err := s.userRepo.CreateUser(ctx, email, username, passwordHash)
 	if err != nil {

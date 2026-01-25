@@ -40,7 +40,7 @@ func main() {
 	// Настройка HTTP маршрутов
 	http.HandleFunc("/api/register", userHandler.RegisterHandler)
 	http.HandleFunc("/api/login", userHandler.LoginHandler)
-	http.HandleFunc("api/profile", middleware.AuthMiddleware(userHandler.ProfileHandler))
+	http.HandleFunc("/api/profile", middleware.AuthMiddleware(userHandler.ProfileHandler))
 	http.HandleFunc("/api/health", handlers.HealthHandler(userRepo))
 
 	// Запуск сервера
