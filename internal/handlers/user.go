@@ -81,18 +81,10 @@ func (h *UserHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 5. Создаем пользователя
-	user, err := h.userService.CreateUser(ctx, req.Email, req.Username, passwordHash)
+	token, user, err := h.userService.CreateUser(ctx, req.Email, req.Username, passwordHash)
 	if err != nil {
 		log.Printf("Create user error: %v", err)
 		sendErrorResponse(w, "Failed to create user", http.StatusInternalServerError)
-		return
-	}
-
-	// 6. Генерируем токен
-	token, err := jwt.GenerateToken(*user)
-	if err != nil {
-		log.Printf("Generate token error: %v", err)
-		sendErrorResponse(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
@@ -146,33 +138,15 @@ func (h *UserHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 3. Находим пользователя
-	user, err := h.userService.GetUserByEmail(ctx, req.Email)
+	// 3. Вызываем сервис
+	token, user, err := h.userService.Login(ctx, req.Email, req.Password)
 	if err != nil {
-		log.Printf("Database error: %v", err)
-		sendErrorResponse(w, "Invalid email or password", http.StatusUnauthorized)
-		return
-	}
-	if user == nil {
-		sendErrorResponse(w, "Invalid email or password", http.StatusUnauthorized)
+		log.Printf("Login error: %v", err)
+		http.Error(w, "Invalid email or password", http.StatusUnauthorized)
 		return
 	}
 
-	// 4. Проверяем пароль
-	if !jwt.CheckPassword(req.Password, user.PasswordHash) {
-		sendErrorResponse(w, "Invalid email or password", http.StatusUnauthorized)
-		return
-	}
-
-	// 5. Генерируем токен
-	token, err := jwt.GenerateToken(*user)
-	if err != nil {
-		log.Printf("Generate token error: %v", err)
-		sendErrorResponse(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	// 6. Успешный ответ
+	// 4. Успешный ответ
 	response := map[string]interface{}{
 		"message": "Login successful",
 		"user": map[string]interface{}{
