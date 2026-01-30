@@ -63,7 +63,7 @@ func (s *PostService) UpdatePost(ctx context.Context, currentUserID, postID int,
 	return updatedPost, nil
 }
 
-// ✅ Удаляет пост (только автор!)
+// Удаляет пост (только автор!)
 func (s *PostService) DeletePost(ctx context.Context, currentUserID, postID int) error {
 	// Проверяем права доступа
 	existingPost, err := s.postRepo.GetPostByID(ctx, postID)
@@ -79,7 +79,7 @@ func (s *PostService) DeletePost(ctx context.Context, currentUserID, postID int)
 	return s.postRepo.DeletePost(ctx, postID)
 }
 
-// ✅ Все посты с пагинацией + total
+// Все посты с пагинацией + total
 func (s *PostService) GetAllPosts(ctx context.Context, limit, offset int) ([]*model.Post, int, error) {
 	// Получаем посты
 	posts, err := s.postRepo.ListPosts(ctx, limit, offset)
@@ -96,7 +96,7 @@ func (s *PostService) GetAllPosts(ctx context.Context, limit, offset int) ([]*mo
 	return posts, total, nil
 }
 
-// ✅ Посты конкретного пользователя
+// Посты конкретного пользователя
 func (s *PostService) GetUserPosts(ctx context.Context, userID, limit, offset int) ([]*model.Post, error) {
 	// Публичный доступ ко всем постам пользователя
 	return s.postRepo.ListPostsByUser(ctx, userID, limit, offset)

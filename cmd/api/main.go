@@ -30,18 +30,43 @@ func main() {
 
 	// 1. Repository - уровень доступа к БД (конкретная реализация postgres)
 	userRepo := postgres.NewPostgresUserRepository(db)
+	postRepo := postgres.NewPostgresPostRepository(db)
 
 	// 2. Service - уровень бизнес-логики (зависит от интерфейса Repository)
 	userService := service.NewUserService(userRepo)
+	postService := service.NewPostService(postRepo, userRepo)
 
-	// 3. Handler - уровень HTTP (зависит от Service)
+	// 3. Логгер
+    // stdLogger := log.New(log.Writer(), "", log.LstdFlags)
+
+	// 4. Handler - уровень HTTP (зависит от Service)
 	userHandler := handlers.NewUserHandler(userService)
+	postHandler := handlers.NewPostHandler(postService)
 
-	// Настройка HTTP маршрутов
+	// Настройка HTTP маршрутов для пользователей
 	http.HandleFunc("/api/register", userHandler.RegisterHandler)
 	http.HandleFunc("/api/login", userHandler.LoginHandler)
 	http.HandleFunc("/api/profile", middleware.AuthMiddleware(userHandler.ProfileHandler))
 	http.HandleFunc("/api/health", handlers.HealthHandler(userRepo))
+
+	// Настройка HTTP маршрутов для постов
+	// GET /api/posts — получить список постов (доступно всем)
+	http.HandleFunc("/api/posts", postHandler.ListPosts)
+
+	// POST /api/posts — создать пост (только авторизованный пользователь)
+    http.HandleFunc("/api/posts", middleware.AuthMiddleware(postHandler.CreatePost))
+
+	// GET /api/posts/{id} — получить один пост
+    http.HandleFunc("/api/posts/{id}", postHandler.GetPost)
+
+	// PUT /api/posts/{id} — обновить пост (только автор)
+    http.HandleFunc("/api/posts/{id}", middleware.AuthMiddleware(postHandler.UpdatePost))
+
+	// DELETE /api/posts/{id} — удалить пост (только автор)
+    http.HandleFunc("/api/posts/{id}", middleware.AuthMiddleware(postHandler.DeletePost))
+
+	// GET /api/posts/user/{id} — получить посты конкретного пользователя (доступно всем)
+	http.HandleFunc("/api/posts/user/{id}", postHandler.ListUserPosts)
 
 	// Запуск сервера
 	port := config.GetEnv("SERVER_PORT", "8080")
@@ -50,6 +75,8 @@ func main() {
 	log.Printf("🔐 Login: POST http://localhost:%s/api/login", port)
 	log.Printf("👤 Profile: GET http://localhost:%s/api/profile (requires token)", port)
 	log.Printf("❤️  Health: GET http://localhost:%s/api/health", port)
+
+	
 
 	log.Fatal(http.ListenAndServe(":"+port, nil))
 }

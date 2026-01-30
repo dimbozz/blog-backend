@@ -24,10 +24,9 @@ type PostHandler struct {
 }
 
 // NewPostHandler создает новый PostHandler
-func NewPostHandler(postService *service.PostService, log *log.Logger) *PostHandler {
+func NewPostHandler(postService *service.PostService) *PostHandler {
 	return &PostHandler{
 		postService: postService,
-		log:         log,
 	}
 }
 
@@ -193,7 +192,7 @@ func (h *PostHandler) ListPosts(w http.ResponseWriter, r *http.Request) {
 
 // ListUserPosts возвращает посты пользователя (публичный)
 func (h *PostHandler) ListUserPosts(w http.ResponseWriter, r *http.Request) {
-	userIDStr := r.URL.Query().Get("user_id")
+	userIDStr := r.PathValue("id")
 	if userIDStr == "" {
 		h.errorResponse(w, http.StatusBadRequest, "user_id required")
 		return
