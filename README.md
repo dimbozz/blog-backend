@@ -132,7 +132,6 @@ func HashPassword(password string) (string, error) {
 // ВАЖНО: Использованы параметризованные запросы!
 func CreateUser(email, username, passwordHash string) (*User, error) {
     query := `INSERT INTO users (email, username, password_hash) VALUES ($1, $2, $3) RETURNING id, created_at`
-    // Реализуйте...
 }
 ```
 

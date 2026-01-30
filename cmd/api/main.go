@@ -37,7 +37,7 @@ func main() {
 	postService := service.NewPostService(postRepo, userRepo)
 
 	// 3. Логгер
-    // stdLogger := log.New(log.Writer(), "", log.LstdFlags)
+	// stdLogger := log.New(log.Writer(), "", log.LstdFlags)
 
 	// 4. Handler - уровень HTTP (зависит от Service)
 	userHandler := handlers.NewUserHandler(userService)
@@ -54,16 +54,16 @@ func main() {
 	http.HandleFunc("/api/posts", postHandler.ListPosts)
 
 	// POST /api/posts — создать пост (только авторизованный пользователь)
-    http.HandleFunc("/api/posts", middleware.AuthMiddleware(postHandler.CreatePost))
+	http.HandleFunc("/api/posts", middleware.AuthMiddleware(postHandler.CreatePost))
 
 	// GET /api/posts/{id} — получить один пост
-    http.HandleFunc("/api/posts/{id}", postHandler.GetPost)
+	http.HandleFunc("/api/posts/{id}", postHandler.GetPost)
 
 	// PUT /api/posts/{id} — обновить пост (только автор)
-    http.HandleFunc("/api/posts/{id}", middleware.AuthMiddleware(postHandler.UpdatePost))
+	http.HandleFunc("/api/posts/{id}", middleware.AuthMiddleware(postHandler.UpdatePost))
 
 	// DELETE /api/posts/{id} — удалить пост (только автор)
-    http.HandleFunc("/api/posts/{id}", middleware.AuthMiddleware(postHandler.DeletePost))
+	http.HandleFunc("/api/posts/{id}", middleware.AuthMiddleware(postHandler.DeletePost))
 
 	// GET /api/posts/user/{id} — получить посты конкретного пользователя (доступно всем)
 	http.HandleFunc("/api/posts/user/{id}", postHandler.ListUserPosts)
@@ -75,8 +75,6 @@ func main() {
 	log.Printf("🔐 Login: POST http://localhost:%s/api/login", port)
 	log.Printf("👤 Profile: GET http://localhost:%s/api/profile (requires token)", port)
 	log.Printf("❤️  Health: GET http://localhost:%s/api/health", port)
-
-	
 
 	log.Fatal(http.ListenAndServe(":"+port, nil))
 }

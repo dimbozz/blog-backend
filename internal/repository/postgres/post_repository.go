@@ -35,7 +35,7 @@ func (r *PostgresPostRepository) CreatePost(ctx context.Context, post *model.Pos
 	// БД заполняет все поля (ID генерируется автоматически)
 	err := row.Scan(
 		&createdPost.ID,        // Автогенерированный ID
-		&createdPost.AuthorID,    // Из параметров INSERT
+		&createdPost.AuthorID,  // Из параметров INSERT
 		&createdPost.Title,     // Из параметров INSERT
 		&createdPost.Content,   // Из параметров INSERT
 		&createdPost.CreatedAt, // CURRENT_TIMESTAMP
