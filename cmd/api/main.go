@@ -37,11 +37,11 @@ func main() {
 	postService := service.NewPostService(postRepo, userRepo)
 
 	// 3. Логгер
-	// stdLogger := log.New(log.Writer(), "", log.LstdFlags)
+	stdLogger := log.New(log.Writer(), "", log.LstdFlags)
 
 	// 4. Handler - уровень HTTP (зависит от Service)
 	userHandler := handlers.NewUserHandler(userService)
-	postHandler := handlers.NewPostHandler(postService)
+	postHandler := handlers.NewPostHandler(postService, stdLogger)
 
 	// Настройка HTTP маршрутов для пользователей
 	http.HandleFunc("/api/register", userHandler.RegisterHandler)

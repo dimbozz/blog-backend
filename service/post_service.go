@@ -38,6 +38,9 @@ func (s *PostService) CreatePost(ctx context.Context, currentUserID int, post *m
 
 // Получаем пост по ID (для всех)
 func (s *PostService) GetPost(ctx context.Context, id int) (*model.Post, error) {
+	if s.postRepo == nil {
+		return nil, fmt.Errorf("postRepo is nil")
+	}
 	return s.postRepo.GetPostByID(ctx, id)
 }
 

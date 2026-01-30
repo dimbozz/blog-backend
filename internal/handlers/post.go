@@ -26,9 +26,10 @@ type PostHandler struct {
 }
 
 // NewPostHandler создает новый PostHandler
-func NewPostHandler(postService *service.PostService) *PostHandler {
+func NewPostHandler(postService *service.PostService, logger *log.Logger) *PostHandler {
 	return &PostHandler{
 		postService: postService,
+		log: logger,
 	}
 }
 
@@ -106,7 +107,7 @@ func (h *PostHandler) GetPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err := strconv.Atoi(idStr)	
+	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		h.errorResponse(w, http.StatusBadRequest, "invalid post ID")
 		return
