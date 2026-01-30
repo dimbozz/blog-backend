@@ -51,19 +51,13 @@ func main() {
 
 	// Настройка HTTP маршрутов для постов
 	// GET /api/posts — получить список постов (доступно всем)
-	http.HandleFunc("/api/posts", postHandler.ListPosts)
-
 	// POST /api/posts — создать пост (только авторизованный пользователь)
-	http.HandleFunc("/api/posts", middleware.AuthMiddleware(postHandler.CreatePost))
+	http.HandleFunc("/api/posts", postHandler.HandlePosts)
 
 	// GET /api/posts/{id} — получить один пост
-	http.HandleFunc("/api/posts/{id}", postHandler.GetPost)
-
 	// PUT /api/posts/{id} — обновить пост (только автор)
-	http.HandleFunc("/api/posts/{id}", middleware.AuthMiddleware(postHandler.UpdatePost))
-
 	// DELETE /api/posts/{id} — удалить пост (только автор)
-	http.HandleFunc("/api/posts/{id}", middleware.AuthMiddleware(postHandler.DeletePost))
+	http.HandleFunc("/api/posts/", postHandler.HandlePostID)
 
 	// GET /api/posts/user/{id} — получить посты конкретного пользователя (доступно всем)
 	http.HandleFunc("/api/posts/user/{id}", postHandler.ListUserPosts)

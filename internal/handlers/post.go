@@ -1,12 +1,14 @@
 package handlers
 
 import (
+	"blog-backend/internal/handlers/middleware"
 	"blog-backend/internal/model"
 	"blog-backend/service"
 	"encoding/json"
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 // Response - единый JSON формат ответа API
@@ -27,6 +29,38 @@ type PostHandler struct {
 func NewPostHandler(postService *service.PostService) *PostHandler {
 	return &PostHandler{
 		postService: postService,
+	}
+}
+
+// GET + POST /api/posts
+func (h *PostHandler) HandlePosts(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		h.ListPosts(w, r)
+	case http.MethodPost:
+		middleware.AuthMiddleware(h.CreatePost)(w, r)
+	default:
+		h.errorResponse(w, http.StatusMethodNotAllowed, "method not allowed")
+	}
+}
+
+// GET/PUT/DELETE /api/posts/{id}
+func (h *PostHandler) HandlePostID(w http.ResponseWriter, r *http.Request) {
+	idStr := strings.TrimPrefix(r.URL.Path, "/api/posts/")
+	if idStr == "" || idStr == "/" {
+		h.errorResponse(w, http.StatusBadRequest, "post ID required")
+		return
+	}
+
+	switch r.Method {
+	case http.MethodGet:
+		h.GetPost(w, r)
+	case http.MethodPut:
+		middleware.AuthMiddleware(h.UpdatePost)(w, r)
+	case http.MethodDelete:
+		middleware.AuthMiddleware(h.DeletePost)(w, r)
+	default:
+		h.errorResponse(w, http.StatusMethodNotAllowed, "method not allowed")
 	}
 }
 
