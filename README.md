@@ -208,10 +208,7 @@ curl -X POST http://localhost:8080/api/posts \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -d '{"title":"Пост","content":"Текст"}'
 
-# GET один пост
-curl "http://localhost:8080/api/posts?id=1"
-
-# ✅ Один пост
+# GET один пост по ID (без токена)
 curl http://localhost:8080/api/posts/1
 
 # ✅ Обновить пост

@@ -58,7 +58,7 @@ func (s *PostService) UpdatePost(ctx context.Context, currentUserID, postID int,
 	}
 
 	// Repository возвращает ОБНОВЛЕННЫЙ пост с updated_at из БД!
-	updatedPost, err := s.postRepo.UpdatePost(ctx, postID, existingPost)
+	updatedPost, err := s.postRepo.UpdatePost(ctx, postID, post)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update post: %w", err)
 	}

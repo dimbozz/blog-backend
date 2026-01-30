@@ -50,7 +50,7 @@ func (h *PostHandler) HandlePostID(w http.ResponseWriter, r *http.Request) {
 	idStr := strings.TrimPrefix(r.URL.Path, "/api/posts/")
 	idStr = strings.TrimSuffix(idStr, "/")
 	if idStr == "" || idStr == "/" {
-		h.errorResponse(w, http.StatusBadRequest, "post ID required первый")
+		h.errorResponse(w, http.StatusBadRequest, "post ID required")
 		return
 	}
 
@@ -103,7 +103,7 @@ func (h *PostHandler) GetPost(w http.ResponseWriter, r *http.Request) {
 	idStr := strings.TrimPrefix(r.URL.Path, "/api/posts/")
 	idStr = strings.TrimSuffix(idStr, "/")
 	if idStr == "" || idStr == "/" {
-		h.errorResponse(w, http.StatusBadRequest, "post ID required второй")
+		h.errorResponse(w, http.StatusBadRequest, "post ID required")
 		return
 	}
 
@@ -136,7 +136,7 @@ func (h *PostHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 	idStr := strings.TrimPrefix(r.URL.Path, "/api/posts/")
 	idStr = strings.TrimSuffix(idStr, "/")
 	if idStr == "" || idStr == "/" {
-		h.errorResponse(w, http.StatusBadRequest, "post ID required третий")
+		h.errorResponse(w, http.StatusBadRequest, "post ID required")
 		return
 	}
 
@@ -180,7 +180,7 @@ func (h *PostHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
 	idStr := strings.TrimPrefix(r.URL.Path, "/api/posts/")
 	idStr = strings.TrimSuffix(idStr, "/")
 	if idStr == "" || idStr == "/" {
-		h.errorResponse(w, http.StatusBadRequest, "post ID required четвертый")
+		h.errorResponse(w, http.StatusBadRequest, "post ID required")
 		return
 	}
 
