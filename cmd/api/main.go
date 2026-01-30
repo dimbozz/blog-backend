@@ -40,7 +40,7 @@ func main() {
 	stdLogger := log.New(log.Writer(), "", log.LstdFlags)
 
 	// 4. Handler - уровень HTTP (зависит от Service)
-	userHandler := handlers.NewUserHandler(userService)
+	userHandler := handlers.NewUserHandler(userService, stdLogger)
 	postHandler := handlers.NewPostHandler(postService, stdLogger)
 
 	// Настройка HTTP маршрутов для пользователей

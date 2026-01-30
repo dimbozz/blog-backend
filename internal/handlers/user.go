@@ -14,12 +14,14 @@ import (
 // UserHandler обрабатывает HTTP запросы для пользователей
 type UserHandler struct {
 	userService *service.UserService
+	log         *log.Logger
 }
 
 // NewUserHandler создает новый UserHandler
-func NewUserHandler(userService *service.UserService) *UserHandler {
+func NewUserHandler(userService *service.UserService, logger *log.Logger) *UserHandler {
 	return &UserHandler{
 		userService: userService,
+		log:      logger,
 	}
 }
 
