@@ -47,8 +47,9 @@ func (h *PostHandler) HandlePosts(w http.ResponseWriter, r *http.Request) {
 // GET/PUT/DELETE /api/posts/{id}
 func (h *PostHandler) HandlePostID(w http.ResponseWriter, r *http.Request) {
 	idStr := strings.TrimPrefix(r.URL.Path, "/api/posts/")
+	idStr = strings.TrimSuffix(idStr, "/")
 	if idStr == "" || idStr == "/" {
-		h.errorResponse(w, http.StatusBadRequest, "post ID required")
+		h.errorResponse(w, http.StatusBadRequest, "post ID required первый")
 		return
 	}
 
@@ -98,13 +99,14 @@ func (h *PostHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 
 // GetPost возвращает пост по ID (публичный доступ)
 func (h *PostHandler) GetPost(w http.ResponseWriter, r *http.Request) {
-	idStr := r.URL.Query().Get("id")
-	if idStr == "" {
-		h.errorResponse(w, http.StatusBadRequest, "post ID required")
+	idStr := strings.TrimPrefix(r.URL.Path, "/api/posts/")
+	idStr = strings.TrimSuffix(idStr, "/")
+	if idStr == "" || idStr == "/" {
+		h.errorResponse(w, http.StatusBadRequest, "post ID required второй")
 		return
 	}
 
-	id, err := strconv.Atoi(idStr)
+	id, err := strconv.Atoi(idStr)	
 	if err != nil {
 		h.errorResponse(w, http.StatusBadRequest, "invalid post ID")
 		return
@@ -130,9 +132,10 @@ func (h *PostHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	idStr := r.URL.Query().Get("id")
-	if idStr == "" {
-		h.errorResponse(w, http.StatusBadRequest, "post ID required")
+	idStr := strings.TrimPrefix(r.URL.Path, "/api/posts/")
+	idStr = strings.TrimSuffix(idStr, "/")
+	if idStr == "" || idStr == "/" {
+		h.errorResponse(w, http.StatusBadRequest, "post ID required третий")
 		return
 	}
 
@@ -173,9 +176,10 @@ func (h *PostHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	idStr := r.URL.Query().Get("id")
-	if idStr == "" {
-		h.errorResponse(w, http.StatusBadRequest, "post ID required")
+	idStr := strings.TrimPrefix(r.URL.Path, "/api/posts/")
+	idStr = strings.TrimSuffix(idStr, "/")
+	if idStr == "" || idStr == "/" {
+		h.errorResponse(w, http.StatusBadRequest, "post ID required четвертый")
 		return
 	}
 
