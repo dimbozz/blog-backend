@@ -22,6 +22,10 @@ type PostRepository interface {
 	// Список + пагинация
 	ListPosts(ctx context.Context, limit, offset int) ([]*model.Post, error)
 	CountPosts(ctx context.Context) (int, error)
+
+	// Методы планировщика
+	GetReadyToPublish(ctx context.Context, batchSize int) ([]*model.Post, error)
+	PublishPost(ctx context.Context, postID int) error
 }
 
 // UserRepository — интерфейс для работы с пользователями

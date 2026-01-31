@@ -212,7 +212,7 @@ func (r *PostgresPostRepository) ListPosts(ctx context.Context, limit, offset in
 // Подсчитывает общее количество постов (для пагинации)
 func (r *PostgresPostRepository) CountPosts(ctx context.Context) (int, error) {
 	var count int
-	err := r.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM posts").Scan(&count)
+	err := r.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM posts WHERE status = 'published'").Scan(&count)
 	if err != nil {
 		return 0, fmt.Errorf("failed to count posts: %w", err)
 	}
@@ -253,4 +253,57 @@ func (r *PostgresPostRepository) ListPostsByUser(ctx context.Context, userID, li
 	}
 
 	return posts, nil
+}
+
+// Посты готовые к публикации (publish_at <= NOW())
+func (r *PostgresPostRepository) GetReadyToPublish(ctx context.Context, batchSize int) ([]*model.Post, error) {
+	query := `
+        SELECT id, author_id, title, content, status, publish_at, created_at, updated_at 
+        FROM posts 
+        WHERE status = 'draft' AND publish_at <= NOW()
+        ORDER BY publish_at ASC
+        LIMIT $1`
+
+	rows, err := r.db.QueryContext(ctx, query, batchSize)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get ready posts: %w", err)
+	}
+	defer rows.Close()
+
+	var posts []*model.Post
+	for rows.Next() {
+		post := &model.Post{}
+		var publishAtNull sql.NullTime
+		if err := rows.Scan(
+			&post.ID, &post.AuthorID, &post.Title, &post.Content,
+			&post.Status, &publishAtNull, &post.CreatedAt, &post.UpdatedAt,
+		); err != nil {
+			continue // Пропускаем битые строки
+		}
+		if publishAtNull.Valid {
+			post.PublishAt = &publishAtNull.Time
+		}
+		posts = append(posts, post)
+	}
+	return posts, nil
+}
+
+// Публикуем пост (меняем статус)
+func (r *PostgresPostRepository) PublishPost(ctx context.Context, postID int) error {
+	query := `
+        UPDATE posts 
+        SET status = 'published', updated_at = NOW() 
+        WHERE id = $1 AND status = 'draft'`
+
+	result, err := r.db.ExecContext(ctx, query, postID)
+	if err != nil {
+		return fmt.Errorf("failed to publish post %d: %w", postID, err)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil || rows == 0 {
+		return fmt.Errorf("post %d not found or already published", postID)
+	}
+
+	return nil
 }

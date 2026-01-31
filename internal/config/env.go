@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
+	"time"
 
 	"github.com/joho/godotenv"
 )
@@ -25,12 +27,35 @@ type Config struct {
 	JWTSecret   string `mapstructure:"JWT_SECRET"`
 	ServerPort  string `mapstructure:"SERVER_PORT"`
 	Environment string `mapstructure:"ENVIRONMENT"`
+
+	// Настройки планировщика
+	PostTickerDuration time.Duration `mapstructure:"POST_TICKER_DURATION"`
+	PostWorkersCount   int           `mapstructure:"POST_WORKERS_COUNT"`
+	PostBatchSize      int           `mapstructure:"POST_BATCH_SIZE"`
 }
 
 func Load() *Config {
 	// Загружаем .env файл
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found")
+	}
+
+	// Парсим время
+	tickerDuration, err := time.ParseDuration(GetEnv("POST_TICKER_DURATION", "30s"))
+	if err != nil {
+		log.Fatalf("POST_TICKER_DURATION invalid format (use 10s, 30s, 1m): %v", err)
+	}
+
+	// Парсим количество воркеров
+	workersCount, err := strconv.Atoi(GetEnv("POST_WORKERS_COUNT", "5"))
+	if err != nil || workersCount < 1 || workersCount > 20 {
+		log.Fatal("POST_WORKERS_COUNT invalid (must be 1-20)")
+	}
+
+	// Парсим размер батча
+	batchSize, err := strconv.Atoi(GetEnv("POST_BATCH_SIZE", "50"))
+	if err != nil || batchSize < 10 || batchSize > 100 {
+		log.Fatal("POST_BATCH_SIZE invalid (must be 10-100)")
 	}
 
 	// Создаём конфиг из переменных окружения
@@ -43,6 +68,11 @@ func Load() *Config {
 		JWTSecret:   GetEnv("JWT_SECRET", ""),
 		ServerPort:  GetEnv("SERVER_PORT", "8080"),
 		Environment: GetEnv("ENVIRONMENT", "development"),
+
+		// Планировщик из .env
+		PostTickerDuration: tickerDuration,
+		PostWorkersCount:   workersCount,
+		PostBatchSize:      batchSize,
 	}
 
 	// Валидация
@@ -58,6 +88,9 @@ func Load() *Config {
 	if cfg.ServerPort == "" {
 		cfg.ServerPort = "8080"
 	}
+
+	log.Printf("📅 Scheduler config: ticker=%v, workers=%d, batch=%d",
+		cfg.PostTickerDuration, cfg.PostWorkersCount, cfg.PostBatchSize)
 
 	return cfg
 }

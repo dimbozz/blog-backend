@@ -9,6 +9,9 @@ import (
 	"blog-backend/service"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 func main() {
@@ -28,18 +31,28 @@ func main() {
 	// Создаём слои снизу вверх (Repository → Service → Handler)
 	// Каждый слой зависит только от интерфейса предыдущего
 
-	// 1. Repository - уровень доступа к БД (конкретная реализация postgres)
+	// Repository - уровень доступа к БД (конкретная реализация postgres)
 	userRepo := postgres.NewPostgresUserRepository(db)
 	postRepo := postgres.NewPostgresPostRepository(db)
 
-	// 2. Service - уровень бизнес-логики (зависит от интерфейса Repository)
+	// Service - уровень бизнес-логики (зависит от интерфейса Repository)
 	userService := service.NewUserService(userRepo)
-	postService := service.NewPostService(postRepo, userRepo)
+	postService := service.NewPostService(postRepo, userRepo, cfg)
 
-	// 3. Логгер
+	// ✅ Graceful shutdown
+	go func() {
+		sig := make(chan os.Signal, 1)
+		signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+		<-sig
+
+		log.Println("Shutting down...")
+		postService.Stop() // останавливаем планировщик
+	}()
+
+	// Логгер
 	stdLogger := log.New(log.Writer(), "", log.LstdFlags)
 
-	// 4. Handler - уровень HTTP (зависит от Service)
+	// Handler - уровень HTTP (зависит от Service)
 	userHandler := handlers.NewUserHandler(userService, stdLogger)
 	postHandler := handlers.NewPostHandler(postService, stdLogger)
 

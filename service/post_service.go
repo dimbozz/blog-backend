@@ -3,23 +3,118 @@ package service
 import (
 	"context"
 	"fmt"
+	"log"
+	"sync"
+	"time"
 
+	"blog-backend/internal/config"
 	"blog-backend/internal/model"
 	"blog-backend/internal/repository"
 )
 
 // PostService - бизнес-логика постов (проверка прав + делегирование)
 type PostService struct {
-	postRepo repository.PostRepository
-	userRepo repository.UserRepository // Для проверки пользователя
+	postRepo     repository.PostRepository
+	userRepo     repository.UserRepository // Для проверки пользователя
+	wg           sync.WaitGroup
+	ticker       *time.Ticker
+	ctx          context.Context
+	cancel       context.CancelFunc
+	workersCount int // Из .env
+	batchSize    int // Из .env
 }
 
 // Создаем сервис с репозиториями
-func NewPostService(postRepo repository.PostRepository, userRepo repository.UserRepository) *PostService {
-	return &PostService{
-		postRepo: postRepo,
-		userRepo: userRepo,
+func NewPostService(postRepo repository.PostRepository, userRepo repository.UserRepository, cfg *config.Config) *PostService {
+	ctx, cancel := context.WithCancel(context.Background())
+	s := &PostService{
+		postRepo:     postRepo,
+		userRepo:     userRepo,
+		ctx:          ctx,
+		cancel:       cancel,
+		ticker:       time.NewTicker(cfg.PostTickerDuration), // Из .env
+		workersCount: cfg.PostWorkersCount,                   // Из .env
+		batchSize:    cfg.PostBatchSize,                      // Из .env
 	}
+
+	s.StartScheduler()
+	return s
+}
+
+// Запуск планировщика
+func (s *PostService) StartScheduler() {
+	s.wg.Add(1)
+	go s.scheduler()
+}
+
+// Главная горутина планировщика (каждые N секунд из .env)
+func (s *PostService) scheduler() {
+	defer s.wg.Done()
+	defer s.ticker.Stop()
+
+	log.Printf("📅 Post scheduler started (every %v)", s.ticker.C)
+
+	for {
+		select {
+		case <-s.ticker.C:
+			s.publishPendingPosts()
+		case <-s.ctx.Done():
+			log.Println("📅 Post scheduler stopped")
+			return
+		}
+	}
+}
+
+// Worker pool для конкурентной публикации
+func (s *PostService) publishPendingPosts() {
+	// 1. Берем готовые к публикации посты (max batchSize из .env)
+	posts, err := s.postRepo.GetReadyToPublish(s.ctx, s.batchSize)
+	if err != nil {
+		log.Printf("Failed to get ready posts: %v", err)
+		return
+	}
+	if len(posts) == 0 {
+		return
+	}
+
+	log.Printf("Found %d posts ready to publish (max %d)", len(posts), s.batchSize)
+
+	// 2. Канал для worker pool
+	postChan := make(chan *model.Post, len(posts))
+	for _, post := range posts {
+		postChan <- post
+	}
+	close(postChan)
+
+	// 3. Запускаем workersCount воркеров (из .env)
+	var wg sync.WaitGroup
+	for i := 0; i < s.workersCount; i++ {
+		wg.Add(1)
+		go func(workerID int) {
+			defer wg.Done()
+			s.worker(postChan, workerID)
+		}(i + 1)
+	}
+	wg.Wait()
+}
+
+// Воркер публикует один пост
+func (s *PostService) worker(postChan <-chan *model.Post, workerID int) {
+	for post := range postChan {
+		if err := s.postRepo.PublishPost(s.ctx, post.ID); err != nil {
+			log.Printf("Worker %d: failed to publish post %d: %v", workerID, post.ID, err)
+		} else {
+			log.Printf("Worker %d: published post %d (\"%s\")", workerID, post.ID, post.Title)
+		}
+	}
+}
+
+// Graceful shutdown
+func (s *PostService) Stop() {
+	log.Println("Stopping post service...")
+	s.cancel()
+	s.wg.Wait()
+	log.Println("Post service stopped")
 }
 
 // Создаем пост (текущий user = автор)
