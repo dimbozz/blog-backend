@@ -98,9 +98,3 @@ func (s *PostService) GetAllPosts(ctx context.Context, limit, offset int) ([]*mo
 
 	return posts, total, nil
 }
-
-// Посты конкретного пользователя
-func (s *PostService) GetUserPosts(ctx context.Context, userID, limit, offset int) ([]*model.Post, error) {
-	// Публичный доступ ко всем постам пользователя
-	return s.postRepo.ListPostsByUser(ctx, userID, limit, offset)
-}
