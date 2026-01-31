@@ -18,6 +18,8 @@ CREATE TABLE IF NOT EXISTS posts (
     author_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     title VARCHAR(255) NOT NULL,
     content TEXT NOT NULL,
+    status VARCHAR(20) DEFAULT 'draft' CHECK (status IN ('draft', 'published')), -- статус поста
+    publish_at TIMESTAMP,  -- Время публикации (NULL = опубликован сейчас)
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -47,6 +49,10 @@ COMMENT ON TABLE posts IS 'Таблица постов блога';
 COMMENT ON COLUMN posts.author_id IS 'ID автора поста (внешниий ключ → users)';
 COMMENT ON COLUMN posts.title IS 'Заголовок поста';
 COMMENT ON COLUMN posts.content IS 'Содержимое поста';
+COMMENT ON COLUMN posts.status IS 'draft=черновик, published=опубликован';
+COMMENT ON COLUMN posts.publish_at IS 'Время публикации (NULL=сейчас, будущее=отложено)';
+COMMENT ON COLUMN posts.created_at IS 'Дата создания поста';
+COMMENT ON COLUMN posts.updated_at IS 'Дата последнего изменения';
 
 COMMENT ON TABLE comments IS 'Таблица комментариев к постам';
 COMMENT ON COLUMN comments.post_id IS 'ID поста (внешниий ключ → posts)';
