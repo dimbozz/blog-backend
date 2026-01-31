@@ -27,6 +27,7 @@ func NewUserHandler(userService *service.UserService, logger *log.Logger) *UserH
 
 // RegisterHandler обрабатывает регистрацию нового пользователя
 func (h *UserHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("%s %s", r.Method, r.URL.Path) // Логирование запроса
 	// Только POST
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -106,6 +107,7 @@ func (h *UserHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 // LoginHandler обрабатывает вход пользователя
 func (h *UserHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("%s %s", r.Method, r.URL.Path) // Логирование запроса
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -165,6 +167,7 @@ func (h *UserHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 // ProfileHandler возвращает профиль текущего пользователя
 // Этот обработчик должен быть вызван только после AuthMiddleware
 func (h *UserHandler) ProfileHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("%s %s", r.Method, r.URL.Path) // Логирование запроса
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
