@@ -29,7 +29,7 @@ func (r *PostgresPostRepository) CreatePost(ctx context.Context, post *model.Pos
 
 	// Инициализируем структуру createdPost
 	createdPost := &model.Post{}
-	var publishAtNull sql.NullTime  // Для чтения из БД
+	var publishAtNull sql.NullTime // Для чтения из БД
 
 	post.Status = "published"
 	now := time.Now()
@@ -63,15 +63,15 @@ func (r *PostgresPostRepository) CreatePost(ctx context.Context, post *model.Pos
 		&createdPost.Title,     // Из параметров INSERT
 		&createdPost.Content,   // Из параметров INSERT
 		&createdPost.Status,    // Из параметров INSERT
-		&publishAtNull, // CURRENT_TIMESTAMP
+		&publishAtNull,         // CURRENT_TIMESTAMP
 		&createdPost.CreatedAt, // CURRENT_TIMESTAMP
 		&createdPost.UpdatedAt, // CURRENT_TIMESTAMP
 	)
 
 	// ✅ NULL → *time.Time
-    if publishAtNull.Valid {
-        createdPost.PublishAt = &publishAtNull.Time
-    }
+	if publishAtNull.Valid {
+		createdPost.PublishAt = &publishAtNull.Time
+	}
 
 	// Обрабатываем ошибки
 	if err != nil {
@@ -88,9 +88,9 @@ func (r *PostgresPostRepository) GetPostByID(ctx context.Context, id int) (*mode
 
 	// SELECT одной записи по первичному ключу
 	query := `
-        SELECT id, author_id, title, content, created_at, updated_at 
+        SELECT id, author_id, title, content, status, publish_at, created_at, updated_at 
         FROM posts 
-        WHERE id = $1`
+        WHERE id = $1 AND status = 'published'`
 
 	// Выполняем SELECT
 	row := r.db.QueryRowContext(ctx, query, id)
@@ -125,7 +125,7 @@ func (r *PostgresPostRepository) UpdatePost(ctx context.Context, id int, post *m
         UPDATE posts 
         SET title = $1, content = $2, updated_at = CURRENT_TIMESTAMP
         WHERE id = $3
-        RETURNING id, author_id, title, content, created_at, updated_at`
+        RETURNING id, author_id, title, content, status, publish_at, created_at, updated_at`
 
 	// Инициализируем структуру post
 	updatedPost := &model.Post{}
@@ -172,11 +172,12 @@ func (r *PostgresPostRepository) DeletePost(ctx context.Context, id int) error {
 	return nil
 }
 
-// Возвращаем список постов с пагинацией (limit/offset)
+// Возвращаем список постов с пагинацией (limit/offset) - только опубликованные посты
 func (r *PostgresPostRepository) ListPosts(ctx context.Context, limit, offset int) ([]*model.Post, error) {
 	query := `
-        SELECT id, author_id, title, content, created_at, updated_at
+        SELECT id, author_id, title, content, status, publish_at, created_at, updated_at
         FROM posts 
+		WHERE status = 'published'
         ORDER BY created_at DESC 
         LIMIT $1 OFFSET $2`
 
@@ -190,8 +191,16 @@ func (r *PostgresPostRepository) ListPosts(ctx context.Context, limit, offset in
 	for rows.Next() {
 		post := &model.Post{}
 		// Сканируем каждую строку результата
-		if err := rows.Scan(&post.ID, &post.AuthorID, &post.Title, &post.Content,
-			&post.CreatedAt, &post.UpdatedAt); err != nil {
+		if err := rows.Scan(
+			&post.ID,
+			&post.AuthorID,
+			&post.Title,
+			&post.Content,
+			&post.Status,
+			&post.PublishAt,
+			&post.CreatedAt,
+			&post.UpdatedAt,
+		); err != nil {
 			return nil, fmt.Errorf("failed to scan post: %w", err)
 		}
 		posts = append(posts, post)
@@ -213,7 +222,7 @@ func (r *PostgresPostRepository) CountPosts(ctx context.Context) (int, error) {
 // Список постов конкретного пользователя с пагинацией
 func (r *PostgresPostRepository) ListPostsByUser(ctx context.Context, userID, limit, offset int) ([]*model.Post, error) {
 	query := `
-        SELECT id, author_id, title, content, created_at, updated_at
+        SELECT id, author_id, title, content, status, publish_at, created_at, updated_at
         FROM posts 
         WHERE author_id = $1
         ORDER BY created_at DESC 
@@ -228,8 +237,16 @@ func (r *PostgresPostRepository) ListPostsByUser(ctx context.Context, userID, li
 	var posts []*model.Post
 	for rows.Next() {
 		post := &model.Post{}
-		if err := rows.Scan(&post.ID, &post.AuthorID, &post.Title, &post.Content,
-			&post.CreatedAt, &post.UpdatedAt); err != nil {
+		if err := rows.Scan(
+			&post.ID,
+			&post.AuthorID,
+			&post.Title,
+			&post.Content,
+			&post.Status,
+			&post.PublishAt,
+			&post.CreatedAt,
+			&post.UpdatedAt,
+		); err != nil {
 			return nil, fmt.Errorf("failed to scan post: %w", err)
 		}
 		posts = append(posts, post)
