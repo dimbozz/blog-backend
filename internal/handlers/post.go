@@ -29,12 +29,13 @@ type PostHandler struct {
 func NewPostHandler(postService *service.PostService, logger *log.Logger) *PostHandler {
 	return &PostHandler{
 		postService: postService,
-		log: logger,
+		log:         logger,
 	}
 }
 
 // GET + POST /api/posts
 func (h *PostHandler) HandlePosts(w http.ResponseWriter, r *http.Request) {
+	log.Printf("%s %s", r.Method, r.URL.Path) // Логирование запроса
 	switch r.Method {
 	case http.MethodGet:
 		h.ListPosts(w, r)
@@ -47,6 +48,7 @@ func (h *PostHandler) HandlePosts(w http.ResponseWriter, r *http.Request) {
 
 // GET/PUT/DELETE /api/posts/{id}
 func (h *PostHandler) HandlePostID(w http.ResponseWriter, r *http.Request) {
+	log.Printf("%s %s", r.Method, r.URL.Path) // Логирование запроса
 	idStr := strings.TrimPrefix(r.URL.Path, "/api/posts/")
 	idStr = strings.TrimSuffix(idStr, "/")
 	if idStr == "" || idStr == "/" {
@@ -226,38 +228,6 @@ func (h *PostHandler) ListPosts(w http.ResponseWriter, r *http.Request) {
 	h.successResponse(w, http.StatusOK, Response{
 		Data:  posts,
 		Total: total,
-	})
-}
-
-// ListUserPosts возвращает посты пользователя (публичный)
-func (h *PostHandler) ListUserPosts(w http.ResponseWriter, r *http.Request) {
-	userIDStr := r.PathValue("id")
-	if userIDStr == "" {
-		h.errorResponse(w, http.StatusBadRequest, "user_id required")
-		return
-	}
-
-	userID, err := strconv.Atoi(userIDStr)
-	if err != nil {
-		h.errorResponse(w, http.StatusBadRequest, "invalid user_id")
-		return
-	}
-
-	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
-	if limit == 0 {
-		limit = 10
-	}
-	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
-
-	posts, err := h.postService.GetUserPosts(r.Context(), userID, limit, offset)
-	if err != nil {
-		h.log.Printf("list user %d posts failed: %v", userID, err)
-		h.errorResponse(w, http.StatusInternalServerError, "internal server error")
-		return
-	}
-
-	h.successResponse(w, http.StatusOK, Response{
-		Data: posts,
 	})
 }
 

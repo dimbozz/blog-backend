@@ -21,7 +21,7 @@ type UserHandler struct {
 func NewUserHandler(userService *service.UserService, logger *log.Logger) *UserHandler {
 	return &UserHandler{
 		userService: userService,
-		log:      logger,
+		log:         logger,
 	}
 }
 

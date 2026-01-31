@@ -59,9 +59,6 @@ func main() {
 	// DELETE /api/posts/{id} — удалить пост (только автор)
 	http.HandleFunc("/api/posts/", postHandler.HandlePostID)
 
-	// GET /api/posts/user/{id} — получить посты конкретного пользователя (доступно всем)
-	http.HandleFunc("/api/posts/user/{id}", postHandler.ListUserPosts)
-
 	// Запуск сервера
 	port := config.GetEnv("SERVER_PORT", "8080")
 	log.Printf("🚀 Server starting on port %s", port)
