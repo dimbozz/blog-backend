@@ -101,6 +101,8 @@ func (r *PostgresPostRepository) GetPostByID(ctx context.Context, id int) (*mode
 		&post.AuthorID,
 		&post.Title,
 		&post.Content,
+		&post.Status,
+		&post.PublishAt,
 		&post.CreatedAt,
 		&post.UpdatedAt,
 	)
@@ -137,6 +139,8 @@ func (r *PostgresPostRepository) UpdatePost(ctx context.Context, id int, post *m
 		&updatedPost.AuthorID,
 		&updatedPost.Title,
 		&updatedPost.Content,
+		&updatedPost.Status,
+		&updatedPost.PublishAt,
 		&updatedPost.CreatedAt,
 		&updatedPost.UpdatedAt,
 	)
