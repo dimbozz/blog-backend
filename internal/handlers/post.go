@@ -3,6 +3,7 @@ package handlers
 import (
 	"blog-backend/internal/handlers/middleware"
 	"blog-backend/internal/model"
+	"blog-backend/pkg/auth"
 	"blog-backend/service"
 	"encoding/json"
 	"log"
@@ -68,15 +69,9 @@ func (h *PostHandler) HandlePostID(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// getUserIDFromContext извлекает userID из контекста (JWT middleware)
-func (h *PostHandler) getUserIDFromContext(r *http.Request) (int, bool) {
-	userID, ok := r.Context().Value("userID").(int)
-	return userID, ok
-}
-
 // CreatePost создает новый пост (требуется авторизация)
 func (h *PostHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
-	userID, ok := h.getUserIDFromContext(r)
+	userID, ok := auth.GetUserIDFromContext(r)
 	if !ok {
 		h.errorResponse(w, http.StatusUnauthorized, "user not authenticated")
 		return
@@ -129,7 +124,7 @@ func (h *PostHandler) GetPost(w http.ResponseWriter, r *http.Request) {
 
 // UpdatePost обновляет пост (только автор)
 func (h *PostHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
-	userID, ok := h.getUserIDFromContext(r)
+	userID, ok := auth.GetUserIDFromContext(r)
 	if !ok {
 		h.errorResponse(w, http.StatusUnauthorized, "user not authenticated")
 		return
@@ -173,7 +168,7 @@ func (h *PostHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 
 // DeletePost удаляет пост (только автор)
 func (h *PostHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
-	userID, ok := h.getUserIDFromContext(r)
+	userID, ok := auth.GetUserIDFromContext(r)
 	if !ok {
 		h.errorResponse(w, http.StatusUnauthorized, "user not authenticated")
 		return

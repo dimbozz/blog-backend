@@ -163,7 +163,7 @@ func (h *UserHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // ProfileHandler возвращает профиль текущего пользователя
-// Этот обработчик вызывается только после AuthMiddleware
+// Этот обработчик должен быть вызван только после AuthMiddleware
 func (h *UserHandler) ProfileHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
