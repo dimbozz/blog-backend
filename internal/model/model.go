@@ -50,12 +50,14 @@ type Claims struct {
 }
 
 type Post struct {
-	ID        int       `json:"id"`
-	Title     string    `json:"title"`     // Заголовок поста
-	Content   string    `json:"content"`   // Текст поста
-	AuthorID  int       `json:"author_id"` // ID автора комментария
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID        int        `json:"id"`
+	Title     string     `json:"title"`      // Заголовок поста
+	Content   string     `json:"content"`    // Текст поста
+	AuthorID  int        `json:"author_id"`  // ID автора комментария
+	Status    string     `json:"status"`     // "draft" или "published"
+	PublishAt *time.Time `json:"publish_at"` // через указатель, который может быть nil (для представления SQL NULL)
+	CreatedAt time.Time  `json:"created_at"`
+	UpdatedAt time.Time  `json:"updated_at"`
 }
 
 type Comment struct {

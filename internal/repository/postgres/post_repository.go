@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"time"
 
 	"blog-backend/internal/model"
 )
@@ -22,15 +23,38 @@ func NewPostgresPostRepository(db *sql.DB) *PostgresPostRepository {
 func (r *PostgresPostRepository) CreatePost(ctx context.Context, post *model.Post) (*model.Post, error) {
 	// INSERT с RETURNING возвращает все поля созданной записи
 	query := `
-        INSERT INTO posts (author_id, title, content) 
-        VALUES ($1, $2, $3) 
-        RETURNING id, author_id, title, content, created_at, updated_at`
+        INSERT INTO posts (author_id, title, content, status, publish_at) 
+        VALUES ($1, $2, $3, $4, $5) 
+        RETURNING id, author_id, title, content, status, publish_at, created_at, updated_at`
 
 	// Инициализируем структуру createdPost
 	createdPost := &model.Post{}
+	var publishAtNull sql.NullTime  // Для чтения из БД
 
-	// Выполняем INSERT, передаем только данные (author_id, title, content)
-	row := r.db.QueryRowContext(ctx, query, post.AuthorID, post.Title, post.Content)
+	post.Status = "published"
+	now := time.Now()
+
+	if post.PublishAt != nil && post.PublishAt.After(now) {
+		post.Status = "draft"
+	}
+
+	// sql.NullTime для БД
+	var publishAtParam sql.NullTime
+	if post.PublishAt != nil {
+		publishAtParam.Time = *post.PublishAt
+		publishAtParam.Valid = true
+	}
+
+	// Выполняем INSERT, передаем только данные (author_id, title, content, publish_at)
+	row := r.db.QueryRowContext(
+		ctx,
+		query,
+		post.AuthorID,
+		post.Title,
+		post.Content,
+		post.Status,
+		publishAtParam,
+	)
 
 	// БД заполняет все поля (ID генерируется автоматически)
 	err := row.Scan(
@@ -38,9 +62,16 @@ func (r *PostgresPostRepository) CreatePost(ctx context.Context, post *model.Pos
 		&createdPost.AuthorID,  // Из параметров INSERT
 		&createdPost.Title,     // Из параметров INSERT
 		&createdPost.Content,   // Из параметров INSERT
+		&createdPost.Status,    // Из параметров INSERT
+		&publishAtNull, // CURRENT_TIMESTAMP
 		&createdPost.CreatedAt, // CURRENT_TIMESTAMP
 		&createdPost.UpdatedAt, // CURRENT_TIMESTAMP
 	)
+
+	// ✅ NULL → *time.Time
+    if publishAtNull.Valid {
+        createdPost.PublishAt = &publishAtNull.Time
+    }
 
 	// Обрабатываем ошибки
 	if err != nil {
