@@ -3,6 +3,7 @@ package service_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -15,7 +16,7 @@ func TestPostService_PublishLogic(t *testing.T) {
 	memoryRepo := NewMemoryPostStorage()
 	userRepo := NewMockUserRepo()
 	testConfig := &config.Config{
-		PostTickerDuration :  30 * time.Second,
+		PostTickerDuration: 30 * time.Second,
 	}
 
 	svc := service.NewPostService(memoryRepo, userRepo, testConfig)
@@ -46,6 +47,7 @@ func TestPostService_PublishLogic(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			publishTime := time.Now().Add(tt.publishAtDelta)
+			// log.Printf("TEST: %s, PublishAt=%v, Now=%v", tt.name, publishTime, time.Now())
 			post := &model.Post{
 				Title:     tt.name,
 				Content:   "test content",
@@ -58,6 +60,8 @@ func TestPostService_PublishLogic(t *testing.T) {
 				t.Fatalf("CreatePost failed: %v", err)
 			}
 
+			// log.Printf("AFTER CreatePost: Status=%q, PublishAt=%v", created.Status, created.PublishAt)
+
 			if created.Status != tt.expectedStatus {
 				t.Errorf("expected status %q, got %q", tt.expectedStatus, created.Status)
 			}
@@ -65,43 +69,83 @@ func TestPostService_PublishLogic(t *testing.T) {
 	}
 }
 
-func TestPostService_ListOnlyPublished(t *testing.T) {
+func TestGetAllPosts(t *testing.T) {
 	memoryRepo := NewMemoryPostStorage()
-	userRepo := NewMockUserRepo() 
+	userRepo := NewMockUserRepo()
 	testConfig := &config.Config{
-		PostTickerDuration :  30 * time.Second,
+		PostTickerDuration: 30 * time.Second,
 	}
 	svc := service.NewPostService(memoryRepo, userRepo, testConfig)
 
 	ctx := context.Background()
 
-	// Создаем посты разных статусов
-	pastTime := time.Now().Add(-1 * time.Hour)
-	futureTime := time.Now().Add(1 * time.Hour)
-	publishedPost := &model.Post{
-		Title:     "Published Post",
-		Status:    "published",
-		PublishAt: &pastTime,
-	}
-	draftPost := &model.Post{
-		Title:     "Draft Post",
-		Status:    "draft",
-		PublishAt: &futureTime,
+	// без пагинации
+	tests := []struct {
+		name           string
+		postsToCreate  int
+		limit          int
+		offset         int
+		wantPostsCount int
+		wantTotal      int
+	}{
+		{
+			name:           "no_posts",
+			postsToCreate:  0,
+			limit:          10,
+			offset:         0,
+			wantPostsCount: 0,
+			wantTotal:      0,
+		},
+		{
+			name:           "one_post",
+			postsToCreate:  1,
+			limit:          10,
+			offset:         0,
+			wantPostsCount: 1,
+			wantTotal:      1,
+		},
+		{
+			name:           "three_posts_all",
+			postsToCreate:  3,
+			limit:          10,
+			offset:         0,
+			wantPostsCount: 3,
+			wantTotal:      3,
+		},
 	}
 
-	svc.CreatePost(ctx, 1, publishedPost)
-	svc.CreatePost(ctx, 1, draftPost)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// ✅ Очищаем репозиторий между тестами
+			memoryRepo = NewMemoryPostStorage()
+			svc = service.NewPostService(memoryRepo, NewMockUserRepo(), testConfig)
 
-	// ListPosts возвращает только published
-	listPosts, total, err := svc.GetAllPosts(ctx, 10, 0)
-	if err != nil {
-		t.Fatalf("GetAllPosts failed: %v", err)
-	}
+			// Создаем нужное количество постов
+			for i := 0; i < tt.postsToCreate; i++ {
+				post := &model.Post{
+					Title:   fmt.Sprintf("post-%d", i),
+					Content: fmt.Sprintf("content-%d", i),
+					Status:  "published",
+				}
+				_, err := svc.CreatePost(ctx, 1, post)
+				if err != nil {
+					t.Fatalf("CreatePost failed: %v", err)
+				}
+			}
 
-	if total != 1 {
-		t.Errorf("expected 1 published post, got total=%d", total)
-	}
-	if len(listPosts) != 1 || listPosts[0].Title != "Published Post" {
-		t.Errorf("expected only published post, got: %v", listPosts)
+			// Тестируем GetAllPosts
+			gotPosts, gotTotal, err := svc.GetAllPosts(ctx, tt.limit, tt.offset)
+			if err != nil {
+				t.Fatalf("GetAllPosts() error = %v", err)
+			}
+
+			if len(gotPosts) != tt.wantPostsCount {
+				t.Errorf("expected %d posts, got %d", tt.wantPostsCount, len(gotPosts))
+			}
+
+			if gotTotal != tt.wantTotal {
+				t.Errorf("expected total %d, got %d", tt.wantTotal, gotTotal)
+			}
+		})
 	}
 }

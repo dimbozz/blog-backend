@@ -124,6 +124,26 @@ func (s *PostService) CreatePost(ctx context.Context, currentUserID int, post *m
 		return nil, fmt.Errorf("user not found: %w", err)
 	}
 
+	// Логика статусов по PublishAt
+	now := time.Now()
+	if post.PublishAt != nil {
+		// log.Printf("PublishAt=%v, Now=%v", *post.PublishAt, now)
+
+		// Прошлое или сейчас = published
+		if (*post.PublishAt).Before(now) || (*post.PublishAt).Equal(now) {
+			post.Status = "published"
+			// log.Printf("AUTO-PUBLISHED: %s", post.Title)
+		} else {
+			// Будущее = draft (явно устанавливаем!)
+			post.Status = "draft"
+			// log.Printf("⏳ SCHEDULED AS DRAFT: %s", post.Title)
+		}
+	} else {
+		// Без даты = published
+		post.Status = "published"
+		// log.Printf("📝 NO DATE = published: %s", post.Title)
+	}
+
 	// Устанавливаем автора поста
 	post.AuthorID = currentUserID
 
