@@ -16,7 +16,7 @@ import (
 	"blog-backend/pkg/auth"
 )
 
-// TestPostHandler — полностью переопределяет handlers БЕЗ service вызовов
+// TestPostHandler — переопределяет handlers
 type TestPostHandler struct{}
 
 func (h *TestPostHandler) HandlePosts(w http.ResponseWriter, r *http.Request) {

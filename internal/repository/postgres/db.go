@@ -25,10 +25,3 @@ func NewDB(cfg *config.Config) (*sql.DB, error) {
 
 	return db, nil
 }
-
-// CloseDB закрывает соединение с базой данных
-// func CloseDB() {
-// 	if db != nil {
-// 		db.Close()
-// 	}
-// }

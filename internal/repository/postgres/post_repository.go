@@ -68,7 +68,7 @@ func (r *PostgresPostRepository) CreatePost(ctx context.Context, post *model.Pos
 		&createdPost.UpdatedAt, // CURRENT_TIMESTAMP
 	)
 
-	// ✅ NULL → *time.Time
+	// NULL → *time.Time
 	if publishAtNull.Valid {
 		createdPost.PublishAt = &publishAtNull.Time
 	}

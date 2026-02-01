@@ -235,9 +235,6 @@ curl "http://localhost:8080/api/posts/user/5?limit=3"
 # Перейти в корень проекта
 cd blog-backend
 
-# Запустить ВСЕ тесты проекта
-go test ./... -v
-
 # Только handlers тесты  
 go test ./internal/handlers -v
 
@@ -253,6 +250,8 @@ go test ./internal/handlers -run TestPostHandler
 # Тест с таймаутом (если зависает)
 go test ./internal/handlers -timeout 10s
 
+# Тест отложенных публикаций
+go test ./service/service_test -v
 
 ## 🆘 Получение помощи
 
