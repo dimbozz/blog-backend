@@ -218,7 +218,7 @@ func (r *PostgresPostRepository) CountPosts(ctx context.Context) (int, error) {
 	return count, nil
 }
 
-// Список постов конкретного пользователя с пагинацией
+// Список постов конкретного пользователя с пагинацией (по заданию пока не требуется)
 func (r *PostgresPostRepository) ListPostsByUser(ctx context.Context, userID, limit, offset int) ([]*model.Post, error) {
 	query := `
         SELECT id, author_id, title, content, status, publish_at, created_at, updated_at
@@ -274,8 +274,14 @@ func (r *PostgresPostRepository) GetReadyToPublish(ctx context.Context, batchSiz
 		post := &model.Post{}
 		var publishAtNull sql.NullTime
 		if err := rows.Scan(
-			&post.ID, &post.AuthorID, &post.Title, &post.Content,
-			&post.Status, &publishAtNull, &post.CreatedAt, &post.UpdatedAt,
+			&post.ID,
+			&post.AuthorID,
+			&post.Title,
+			&post.Content,
+			&post.Status,
+			&publishAtNull,
+			&post.CreatedAt,
+			&post.UpdatedAt,
 		); err != nil {
 			continue // Пропускаем битые строки
 		}

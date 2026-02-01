@@ -7,8 +7,13 @@ import (
 	"blog-backend/internal/repository/postgres"
 	"blog-backend/pkg/jwt"
 	"blog-backend/service"
+	"context"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 )
 
 func main() {
@@ -36,16 +41,6 @@ func main() {
 	userService := service.NewUserService(userRepo)
 	postService := service.NewPostService(postRepo, userRepo, cfg)
 
-	// // Graceful shutdown
-	// go func() {
-	// 	sig := make(chan os.Signal, 1)
-	// 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
-	// 	<-sig
-
-	// 	log.Println("Shutting down...")
-	// 	postService.Stop() // останавливаем планировщик
-	// }()
-
 	// Логгер
 	stdLogger := log.New(log.Writer(), "", log.LstdFlags)
 
@@ -69,13 +64,51 @@ func main() {
 	// DELETE /api/posts/{id} — удалить пост (только автор)
 	http.HandleFunc("/api/posts/", postHandler.HandlePostID)
 
-	// Запуск сервера
+	// Создаем HTTP сервер для graceful shutdown
 	port := config.GetEnv("SERVER_PORT", "8080")
-	log.Printf("🚀 Server starting on port %s", port)
-	log.Printf("📝 Register: POST http://localhost:%s/api/register", port)
-	log.Printf("🔐 Login: POST http://localhost:%s/api/login", port)
-	log.Printf("👤 Profile: GET http://localhost:%s/api/profile (requires token)", port)
-	log.Printf("❤️  Health: GET http://localhost:%s/api/health", port)
+	srv := &http.Server{
+		Addr:    ":" + port,
+		Handler: nil, // используем глобальный mux с нашими http.HandleFunc()
+	}
 
-	log.Fatal(http.ListenAndServe(":"+port, nil))
+	// Запускаем отдельную горутину с сервером
+	go func() {
+		log.Printf("🚀 Server starting on port %s", port)
+		log.Printf("📝 Register: POST http://localhost:%s/api/register", port)
+		log.Printf("🔐 Login: POST http://localhost:%s/api/login", port)
+		log.Printf("👤 Profile: GET http://localhost:%s/api/profile (requires token)", port)
+		log.Printf("❤️  Health: GET http://localhost:%s/api/health", port)
+
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Server failed: %v", err)
+		}
+	}()
+
+	// Блокируем main() до сигнала Ctrl+C
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+	<-quit
+	log.Println("🛑 Shutdown signal received, starting graceful shutdown...")
+
+	// Timeout контекст (30 секунд)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	// Останавливаем планировщик
+	go func() {
+		log.Println("Stopping post scheduler...")
+		postService.Stop()
+	}()
+
+	// Останавливаем HTTP сервер
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Printf("HTTP Server forced shutdown: %v", err)
+	} else {
+		log.Println("HTTP Server stopped")
+	}
+
+	// Закрываем БД соединения
+	db.SetMaxOpenConns(0)
+
+	log.Println("✅ Graceful shutdown complete!")
 }

@@ -14,27 +14,29 @@ import (
 
 // PostService - бизнес-логика постов (проверка прав + делегирование)
 type PostService struct {
-	postRepo     repository.PostRepository
-	userRepo     repository.UserRepository // Для проверки пользователя
-	wg           sync.WaitGroup
-	ticker       *time.Ticker
-	ctx          context.Context
-	cancel       context.CancelFunc
-	workersCount int // Из .env
-	batchSize    int // Из .env
+	postRepo       repository.PostRepository
+	userRepo       repository.UserRepository // Для проверки пользователя
+	wg             sync.WaitGroup
+	ticker         *time.Ticker
+	tickerDuration time.Duration
+	ctx            context.Context
+	cancel         context.CancelFunc
+	workersCount   int // Из .env
+	batchSize      int // Из .env
 }
 
 // Создаем сервис с репозиториями
 func NewPostService(postRepo repository.PostRepository, userRepo repository.UserRepository, cfg *config.Config) *PostService {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &PostService{
-		postRepo:     postRepo,
-		userRepo:     userRepo,
-		ctx:          ctx,
-		cancel:       cancel,
-		ticker:       time.NewTicker(cfg.PostTickerDuration), // Из .env
-		workersCount: cfg.PostWorkersCount,                   // Из .env
-		batchSize:    cfg.PostBatchSize,                      // Из .env
+		postRepo:       postRepo,
+		userRepo:       userRepo,
+		ctx:            ctx,
+		cancel:         cancel,
+		ticker:         time.NewTicker(cfg.PostTickerDuration), // Из .env
+		tickerDuration: cfg.PostTickerDuration,                 // Из .env
+		workersCount:   cfg.PostWorkersCount,                   // Из .env
+		batchSize:      cfg.PostBatchSize,                      // Из .env
 	}
 
 	s.StartScheduler()
@@ -52,7 +54,7 @@ func (s *PostService) scheduler() {
 	defer s.wg.Done()
 	defer s.ticker.Stop()
 
-	log.Printf("📅 Post scheduler started (every %v)", s.ticker.C)
+	log.Printf("📅 Post scheduler started (every %v)", s.tickerDuration)
 
 	for {
 		select {
@@ -111,10 +113,8 @@ func (s *PostService) worker(postChan <-chan *model.Post, workerID int) {
 
 // Graceful shutdown
 func (s *PostService) Stop() {
-	log.Println("Stopping post service...")
 	s.cancel()
 	s.wg.Wait()
-	log.Println("Post service stopped")
 }
 
 // Создаем пост (текущий user = автор)
