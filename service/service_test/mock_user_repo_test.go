@@ -1,5 +1,5 @@
 // service/mock_user_repo_test.go
-package service
+package service_test
 
 import (
 	"context"

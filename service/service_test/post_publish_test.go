@@ -13,9 +13,12 @@ import (
 
 func TestPostService_PublishLogic(t *testing.T) {
 	memoryRepo := NewMemoryPostStorage()
-	testConfig := &config.Config{}
+	userRepo := NewMockUserRepo()
+	testConfig := &config.Config{
+		PostTickerDuration :  30 * time.Second,
+	}
 
-	svc := service.NewPostService(memoryRepo, nil, testConfig)
+	svc := service.NewPostService(memoryRepo, userRepo, testConfig)
 
 	tests := []struct {
 		name           string
@@ -64,8 +67,11 @@ func TestPostService_PublishLogic(t *testing.T) {
 
 func TestPostService_ListOnlyPublished(t *testing.T) {
 	memoryRepo := NewMemoryPostStorage()
-	testConfig := &config.Config{}
-	svc := service.NewPostService(memoryRepo, nil, testConfig)
+	userRepo := NewMockUserRepo() 
+	testConfig := &config.Config{
+		PostTickerDuration :  30 * time.Second,
+	}
+	svc := service.NewPostService(memoryRepo, userRepo, testConfig)
 
 	ctx := context.Background()
 
