@@ -1,4 +1,4 @@
-// service_test/memory_post.go
+// service_test/memory_post_test.go
 // реализация in-memory хранилища постов для тестов
 package service_test
 

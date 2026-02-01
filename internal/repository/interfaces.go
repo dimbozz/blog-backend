@@ -25,7 +25,7 @@ type PostRepository interface {
 
 	// Методы планировщика
 	GetReadyToPublish(ctx context.Context, batchSize int) ([]*model.Post, error)
-    PublishPost(ctx context.Context, postID int) error
+	PublishPost(ctx context.Context, postID int) error
 }
 
 // UserRepository — интерфейс для работы с пользователями
