@@ -9,9 +9,6 @@ import (
 	"blog-backend/service"
 	"log"
 	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
 )
 
 func main() {
@@ -39,15 +36,15 @@ func main() {
 	userService := service.NewUserService(userRepo)
 	postService := service.NewPostService(postRepo, userRepo, cfg)
 
-	// ✅ Graceful shutdown
-	go func() {
-		sig := make(chan os.Signal, 1)
-		signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
-		<-sig
+	// // Graceful shutdown
+	// go func() {
+	// 	sig := make(chan os.Signal, 1)
+	// 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+	// 	<-sig
 
-		log.Println("Shutting down...")
-		postService.Stop() // останавливаем планировщик
-	}()
+	// 	log.Println("Shutting down...")
+	// 	postService.Stop() // останавливаем планировщик
+	// }()
 
 	// Логгер
 	stdLogger := log.New(log.Writer(), "", log.LstdFlags)

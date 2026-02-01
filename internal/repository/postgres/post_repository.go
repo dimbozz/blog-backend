@@ -90,7 +90,7 @@ func (r *PostgresPostRepository) GetPostByID(ctx context.Context, id int) (*mode
 	query := `
         SELECT id, author_id, title, content, status, publish_at, created_at, updated_at 
         FROM posts 
-        WHERE id = $1 AND status = 'published'`
+        WHERE id = $1`
 
 	// Выполняем SELECT
 	row := r.db.QueryRowContext(ctx, query, id)
@@ -123,15 +123,15 @@ func (r *PostgresPostRepository) UpdatePost(ctx context.Context, id int, post *m
 	// UPDATE с автоматическим updated_at и RETURNING всех полей
 	query := `
         UPDATE posts 
-        SET title = $1, content = $2, updated_at = CURRENT_TIMESTAMP
-        WHERE id = $3
+        SET title = $1, content = $2, publish_at = $3, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $4
         RETURNING id, author_id, title, content, status, publish_at, created_at, updated_at`
 
 	// Инициализируем структуру post
 	updatedPost := &model.Post{}
 
 	// Выполняем UPDATE
-	row := r.db.QueryRowContext(ctx, query, post.Title, post.Content, id)
+	row := r.db.QueryRowContext(ctx, query, post.Title, post.Content, post.PublishAt, id)
 
 	// Заполняем структуру данными из БД
 	err := row.Scan(
@@ -177,7 +177,6 @@ func (r *PostgresPostRepository) ListPosts(ctx context.Context, limit, offset in
 	query := `
         SELECT id, author_id, title, content, status, publish_at, created_at, updated_at
         FROM posts 
-		WHERE status = 'published'
         ORDER BY created_at DESC 
         LIMIT $1 OFFSET $2`
 
