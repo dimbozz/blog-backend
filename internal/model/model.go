@@ -62,7 +62,7 @@ type Post struct {
 
 type Comment struct {
 	ID        int       `json:"id"`
-	PostID    string    `json:"post_id"`             // Связь с постом
+	PostID    int       `json:"post_id"`             // Связь с постом
 	AuthorID  int       `json:"author_id"`           // ID автора комментария
 	Content   string    `json:"content"`             // Текст комментария
 	ParentID  *int      `json:"parent_id,omitempty"` // ID родительского комментария, nil = корневой комментарий)

@@ -50,7 +50,7 @@ COMMENT ON COLUMN posts.author_id IS 'ID автора поста (внешнии
 COMMENT ON COLUMN posts.title IS 'Заголовок поста';
 COMMENT ON COLUMN posts.content IS 'Содержимое поста';
 COMMENT ON COLUMN posts.status IS 'draft=черновик, published=опубликован';
-COMMENT ON COLUMN posts.publish_at IS 'Время публикации (NULL=сейчас, будущее=отложено)';
+COMMENT ON COLUMN posts.publish_at IS 'Время публикации (NULL=сейчас, > now = отложено)';
 COMMENT ON COLUMN posts.created_at IS 'Дата создания поста';
 COMMENT ON COLUMN posts.updated_at IS 'Дата последнего изменения';
 
