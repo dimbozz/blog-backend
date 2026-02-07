@@ -35,3 +35,9 @@ type UserRepository interface {
 	CreateUser(ctx context.Context, email string, username string, passwordHash string) (*model.User, error)
 	UserExistsByEmail(ctx context.Context, email string) (bool, error)
 }
+
+// CommentRepository — интерфейс для работы с комментариями
+type CommentRepository interface {
+	Create(ctx context.Context, comment *model.Comment) (int, error)
+	GetByPostID(ctx context.Context, postID int) ([]*model.Comment, error)
+}
