@@ -36,10 +36,12 @@ func main() {
 	// Repository - уровень доступа к БД (конкретная реализация postgres)
 	userRepo := postgres.NewPostgresUserRepository(db)
 	postRepo := postgres.NewPostgresPostRepository(db)
+	commentRepo := postgres.NewPostgresCommentRepository(db)
 
 	// Service - уровень бизнес-логики (зависит от интерфейса Repository)
 	userService := service.NewUserService(userRepo)
 	postService := service.NewPostService(postRepo, userRepo, cfg)
+	commentService := service.NewCommentService(postRepo, commentRepo, userRepo)
 
 	// Логгер
 	stdLogger := log.New(log.Writer(), "", log.LstdFlags)
@@ -47,6 +49,7 @@ func main() {
 	// Handler - уровень HTTP (зависит от Service)
 	userHandler := handlers.NewUserHandler(userService, stdLogger)
 	postHandler := handlers.NewPostHandler(postService, stdLogger)
+	commentHandler := handlers.NewCommentHandler(commentService)
 
 	// Настройка HTTP маршрутов для пользователей
 	http.HandleFunc("/api/register", userHandler.RegisterHandler)
@@ -63,6 +66,10 @@ func main() {
 	// PUT /api/posts/{id} — обновить пост (только автор)
 	// DELETE /api/posts/{id} — удалить пост (только автор)
 	http.HandleFunc("/api/posts/", postHandler.HandlePostID)
+
+	// Настройка HTTP маршрутов для комментариев
+	http.HandleFunc("POST /api/posts/{postId}/comments", middleware.AuthMiddleware(commentHandler.CreateComment))
+	http.HandleFunc("GET /api/posts/{postId}/comments", commentHandler.GetComments)
 
 	// Создаем HTTP сервер для graceful shutdown
 	port := config.GetEnv("SERVER_PORT", "8080")

@@ -13,7 +13,7 @@ type CommentRepository struct {
 	db *sql.DB
 }
 
-func NewCommentRepository(db *sql.DB) *CommentRepository {
+func NewPostgresCommentRepository(db *sql.DB) *CommentRepository {
 	return &CommentRepository{db: db}
 }
 

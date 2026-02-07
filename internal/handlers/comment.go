@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"blog-backend/service"
 )
@@ -27,40 +26,23 @@ type CreateCommentResponse struct {
 	Content string `json:"content"`
 }
 
-// ServeHTTP обрабатывает все роуты комментариев
-func (h *CommentHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// Парсим path: /api/posts/{postID}/comments/*
-	pathParts := strings.Split(strings.TrimPrefix(r.URL.Path, "/api"), "/")
-	if len(pathParts) < 4 || pathParts[0] != "posts" || pathParts[2] != "comments" {
-		http.NotFound(w, r)
-		return
-	}
-
-	postIDStr := pathParts[1]
-	postID, err := strconv.Atoi(postIDStr)
+// POST /api/posts/{postId}/comments
+func (h *CommentHandler) CreateComment(w http.ResponseWriter, r *http.Request) {
+	// postId автоматически из пути
+	postId := r.PathValue("postId")
+	postID, err := strconv.Atoi(postId)
 	if err != nil {
 		http.Error(w, "invalid post ID", http.StatusBadRequest)
 		return
 	}
 
-	// userID из контекста (JWT middleware)
+	// userID из JWT middleware
 	userID, ok := r.Context().Value("userID").(int)
-	if !ok && r.Method == "POST" {
+	if !ok {
 		http.Error(w, "user not authenticated", http.StatusUnauthorized)
 		return
 	}
 
-	switch r.Method {
-	case http.MethodPost:
-		h.handleCreateComment(w, r, postID, userID)
-	case http.MethodGet:
-		h.handleGetComments(w, r, postID)
-	default:
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-	}
-}
-
-func (h *CommentHandler) handleCreateComment(w http.ResponseWriter, r *http.Request, postID int, userID int) {
 	var req CreateCommentRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid JSON", http.StatusBadRequest)
@@ -86,7 +68,16 @@ func (h *CommentHandler) handleCreateComment(w http.ResponseWriter, r *http.Requ
 	})
 }
 
-func (h *CommentHandler) handleGetComments(w http.ResponseWriter, r *http.Request, postID int) {
+// GET /api/posts/{postId}/comments
+func (h *CommentHandler) GetComments(w http.ResponseWriter, r *http.Request) {
+	// postId автоматически из пути
+	postId := r.PathValue("postId")
+	postID, err := strconv.Atoi(postId)
+	if err != nil {
+		http.Error(w, "invalid post ID", http.StatusBadRequest)
+		return
+	}
+
 	comments, err := h.commentSvc.GetCommentsByPostID(r.Context(), postID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
