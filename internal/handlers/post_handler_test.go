@@ -1,4 +1,4 @@
-// internal/handlers/post_handlers_test.go
+// internal/handlers/post_handler_test.go
 package handlers_test
 
 import (
@@ -16,134 +16,174 @@ import (
 	"blog-backend/pkg/auth"
 )
 
-// TestPostHandler — переопределяет handlers
-type TestPostHandler struct{}
+// TestPostHandler — МОК с реальными методами CreatePost/GetPost/UpdatePost/DeletePost
+type TestPostHandler struct {
+	posts map[int]*model.Post
+}
 
-func (h *TestPostHandler) HandlePosts(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodGet:
-		// Mock ListPosts
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		resp := handlers.Response{
-			Data:  []*model.Post{{ID: 1, Title: "Test Post"}},
-			Total: 1,
-		}
-		json.NewEncoder(w).Encode(resp)
-	case http.MethodPost:
-		// Mock CreatePost с проверкой авторизации
-		_, ok := auth.GetUserIDFromContext(r)
-		if !ok {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusUnauthorized)
-			json.NewEncoder(w).Encode(handlers.Response{Error: "user not authenticated"})
-			return
-		}
-
-		var post model.Post
-		if err := json.NewDecoder(r.Body).Decode(&post); err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(handlers.Response{Error: "invalid JSON"})
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusCreated)
-		resp := handlers.Response{Data: &model.Post{ID: 1, Title: post.Title}}
-		json.NewEncoder(w).Encode(resp)
-	default:
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		json.NewEncoder(w).Encode(handlers.Response{Error: "method not allowed"})
+func NewTestPostHandler() *TestPostHandler {
+	return &TestPostHandler{
+		posts: make(map[int]*model.Post),
 	}
 }
 
-func (h *TestPostHandler) HandlePostID(w http.ResponseWriter, r *http.Request) {
-	idStr := strings.TrimPrefix(r.URL.Path, "/api/posts/")
-	idStr = strings.TrimSuffix(idStr, "/")
-	if idStr == "" || idStr == "/" {
+func (h *TestPostHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
+	// Проверка авторизации
+	_, ok := auth.GetUserIDFromContext(r)
+	if !ok {
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(handlers.Response{Error: "post ID required"})
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(handlers.Response{Error: "user not authenticated"})
 		return
 	}
 
-	switch r.Method {
-	case http.MethodGet:
-		id, err := strconv.Atoi(idStr)
-		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(handlers.Response{Error: "invalid post ID"})
-			return
-		}
+	// Парсинг JSON
+	var post model.Post
+	if err := json.NewDecoder(r.Body).Decode(&post); err != nil {
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		resp := handlers.Response{Data: &model.Post{ID: id, Title: "Test Post"}}
-		json.NewEncoder(w).Encode(resp)
-	case http.MethodPut, http.MethodDelete:
-		_, ok := auth.GetUserIDFromContext(r)
-		if !ok {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusUnauthorized)
-			json.NewEncoder(w).Encode(handlers.Response{Error: "user not authenticated"})
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(handlers.Response{Message: "success"})
-	default:
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		json.NewEncoder(w).Encode(handlers.Response{Error: "method not allowed"})
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(handlers.Response{Error: "invalid JSON"})
+		return
 	}
+
+	// Сохранение поста
+	post.ID = 1
+	h.posts[post.ID] = &post
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(handlers.Response{Data: &post})
 }
 
-func TestHandlePosts(t *testing.T) {
+func (h *TestPostHandler) GetPost(w http.ResponseWriter, r *http.Request) {
+	idStr := strings.TrimPrefix(r.URL.Path, "/api/posts/")
+	idStr = strings.TrimSuffix(idStr, "/")
+	
+	id, err := strconv.Atoi(idStr)
+	if err != nil || id <= 0 {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(handlers.Response{Error: "invalid post ID"})
+		return
+	}
+
+	if post, exists := h.posts[id]; exists {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(handlers.Response{Data: post})
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusNotFound)
+	json.NewEncoder(w).Encode(handlers.Response{Error: "post not found"})
+}
+
+func (h *TestPostHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
+	idStr := strings.TrimPrefix(r.URL.Path, "/api/posts/")
+	idStr = strings.TrimSuffix(idStr, "/")
+	
+	id, err := strconv.Atoi(idStr)
+	if err != nil || id <= 0 {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(handlers.Response{Error: "invalid post ID"})
+		return
+	}
+
+	// Проверка авторизации
+	_, ok := auth.GetUserIDFromContext(r)
+	if !ok {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(handlers.Response{Error: "user not authenticated"})
+		return
+	}
+
+	// Парсинг JSON
+	var post model.Post
+	if err := json.NewDecoder(r.Body).Decode(&post); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(handlers.Response{Error: "invalid JSON"})
+		return
+	}
+
+	post.ID = id
+	h.posts[id] = &post
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(handlers.Response{Message: "post updated"})
+}
+
+func (h *TestPostHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
+	idStr := strings.TrimPrefix(r.URL.Path, "/api/posts/")
+	idStr = strings.TrimSuffix(idStr, "/")
+	
+	id, err := strconv.Atoi(idStr)
+	if err != nil || id <= 0 {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(handlers.Response{Error: "invalid post ID"})
+		return
+	}
+
+	// Проверка авторизации
+	_, ok := auth.GetUserIDFromContext(r)
+	if !ok {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(handlers.Response{Error: "user not authenticated"})
+		return
+	}
+
+	delete(h.posts, id)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(handlers.Response{Message: "post deleted"})
+}
+
+// TestCreatePost — table-driven тест
+func TestCreatePost(t *testing.T) {
 	tests := []struct {
 		name           string
-		method         string
-		url            string
 		body           string
 		setContextUser bool
 		expectedStatus int
 	}{
 		{
-			name:           "GET ListPosts",
-			method:         http.MethodGet,
-			url:            "/api/posts",
-			expectedStatus: http.StatusOK,
+			name:           "valid create post",
+			body:           `{"title":"Test Post","content":"test content"}`,
+			setContextUser: true,
+			expectedStatus: http.StatusCreated,
 		},
 		{
-			name:           "POST CreatePost no auth",
-			method:         http.MethodPost,
-			url:            "/api/posts",
+			name:           "no auth",
 			body:           `{"title":"Test","content":"test"}`,
 			setContextUser: false,
 			expectedStatus: http.StatusUnauthorized,
 		},
 		{
-			name:           "POST invalid JSON",
-			method:         http.MethodPost,
-			url:            "/api/posts",
+			name:           "invalid JSON",
 			body:           `{invalid json`,
 			setContextUser: true,
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
-			name:           "Method not allowed",
-			method:         "PATCH",
-			url:            "/api/posts",
-			expectedStatus: http.StatusMethodNotAllowed,
+			name:           "empty body",
+			body:           ``,
+			setContextUser: true,
+			expectedStatus: http.StatusBadRequest,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			h := &TestPostHandler{}
+			h := NewTestPostHandler()
 
-			req := httptest.NewRequest(tt.method, tt.url, bytes.NewReader([]byte(tt.body)))
+			req := httptest.NewRequest(http.MethodPost, "/api/posts", bytes.NewReader([]byte(tt.body)))
 			if tt.body != "" {
 				req.Header.Set("Content-Type", "application/json")
 			}
@@ -154,72 +194,128 @@ func TestHandlePosts(t *testing.T) {
 			}
 
 			rec := httptest.NewRecorder()
-			h.HandlePosts(rec, req)
+			h.CreatePost(rec, req)
 
-			res := rec.Result()
-			defer res.Body.Close()
-
-			if res.StatusCode != tt.expectedStatus {
-				t.Errorf("Ожидался статус %d, получено %d", tt.expectedStatus, res.StatusCode)
+			if rec.Code != tt.expectedStatus {
+				t.Errorf("expected %d, got %d", tt.expectedStatus, rec.Code)
 			}
 		})
 	}
 }
 
-func TestHandlePostID(t *testing.T) {
+// TestGetPost — table-driven тест
+func TestGetPost(t *testing.T) {
 	tests := []struct {
 		name           string
-		method         string
-		url            string
-		body           string
-		setContextUser bool
+		postId         string
+		setupData      bool
 		expectedStatus int
 	}{
 		{
-			name:           "GET valid ID",
-			method:         http.MethodGet,
-			url:            "/api/posts/123",
+			name:           "valid post ID",
+			postId:         "1",
+			setupData:      true,
 			expectedStatus: http.StatusOK,
 		},
 		{
-			name:           "GET invalid ID",
-			method:         http.MethodGet,
-			url:            "/api/posts/abc",
+			name:           "post not found",
+			postId:         "999",
+			setupData:      false,
+			expectedStatus: http.StatusNotFound,
+		},
+		{
+			name:           "invalid post ID",
+			postId:         "abc",
+			setupData:      false,
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
-			name:           "GET empty ID",
-			method:         http.MethodGet,
-			url:            "/api/posts/",
+			name:           "empty post ID",
+			postId:         "",
+			setupData:      false,
 			expectedStatus: http.StatusBadRequest,
-		},
-		{
-			name:           "PUT no auth",
-			method:         http.MethodPut,
-			url:            "/api/posts/1",
-			setContextUser: false,
-			expectedStatus: http.StatusUnauthorized,
-		},
-		{
-			name:           "DELETE no auth",
-			method:         http.MethodDelete,
-			url:            "/api/posts/1",
-			setContextUser: false,
-			expectedStatus: http.StatusUnauthorized,
-		},
-		{
-			name:           "Method not allowed",
-			method:         "PATCH",
-			url:            "/api/posts/1",
-			expectedStatus: http.StatusMethodNotAllowed,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			h := &TestPostHandler{}
+			h := NewTestPostHandler()
+			if tt.setupData {
+				h.posts[1] = &model.Post{ID: 1, Title: "Test Post"}
+			}
 
-			req := httptest.NewRequest(tt.method, tt.url, bytes.NewReader([]byte(tt.body)))
+			req := httptest.NewRequest(http.MethodGet, "/api/posts/"+tt.postId, nil)
+			rec := httptest.NewRecorder()
+
+			h.GetPost(rec, req)
+
+			if rec.Code != tt.expectedStatus {
+				t.Errorf("expected %d, got %d", tt.expectedStatus, rec.Code)
+			}
+		})
+	}
+}
+
+// TestUpdatePost — table-driven тест
+func TestUpdatePost(t *testing.T) {
+	tests := []struct {
+		name           string
+		postId         string
+		body           string
+		setContextUser bool
+		setupData      bool
+		expectedStatus int
+	}{
+		{
+			name:           "valid update with auth",
+			postId:         "1",
+			body:           `{"title":"Updated","content":"updated content"}`,
+			setContextUser: true,
+			setupData:      true,
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "no auth",
+			postId:         "1",
+			body:           `{"title":"Updated","content":"updated"}`,
+			setContextUser: false,
+			setupData:      true,
+			expectedStatus: http.StatusUnauthorized,
+		},
+		{
+			name:           "post not found",
+			postId:         "999",
+			body:           `{"title":"Updated","content":"updated"}`,
+			setContextUser: true,
+			setupData:      false,
+			expectedStatus: http.StatusNotFound,
+		},
+		{
+			name:           "invalid post ID",
+			postId:         "abc",
+			body:           `{"title":"Updated","content":"updated"}`,
+			setContextUser: true,
+			setupData:      false,
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "invalid JSON",
+			postId:         "1",
+			body:           `{invalid`,
+			setContextUser: true,
+			setupData:      true,
+			expectedStatus: http.StatusBadRequest,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := NewTestPostHandler()
+			if tt.setupData {
+				h.posts[1] = &model.Post{ID: 1, Title: "Original"}
+			}
+
+			req := httptest.NewRequest(http.MethodPut, "/api/posts/"+tt.postId, bytes.NewReader([]byte(tt.body)))
 			if tt.body != "" {
 				req.Header.Set("Content-Type", "application/json")
 			}
@@ -230,50 +326,74 @@ func TestHandlePostID(t *testing.T) {
 			}
 
 			rec := httptest.NewRecorder()
-			h.HandlePostID(rec, req)
+			h.UpdatePost(rec, req)
 
-			res := rec.Result()
-			defer res.Body.Close()
-
-			if res.StatusCode != tt.expectedStatus {
-				t.Errorf("Ожидался статус %d, получено %d", tt.expectedStatus, res.StatusCode)
+			if rec.Code != tt.expectedStatus {
+				t.Errorf("expected %d, got %d", tt.expectedStatus, rec.Code)
 			}
 		})
 	}
 }
 
-func TestCreatePostWithValidJSON(t *testing.T) {
-	h := &TestPostHandler{}
-
-	req := httptest.NewRequest(http.MethodPost, "/api/posts",
-		bytes.NewReader([]byte(`{"title":"Valid","content":"test"}`)))
-	req.Header.Set("Content-Type", "application/json")
-
-	ctx := context.WithValue(req.Context(), "userID", 1)
-	req = req.WithContext(ctx)
-
-	rec := httptest.NewRecorder()
-	h.HandlePosts(rec, req)
-
-	res := rec.Result()
-	defer res.Body.Close()
-
-	if res.StatusCode != http.StatusCreated {
-		t.Errorf("Ожидался %d, получено %d", http.StatusCreated, res.StatusCode)
+// TestDeletePost — table-driven тест
+func TestDeletePost(t *testing.T) {
+	tests := []struct {
+		name           string
+		postId         string
+		setContextUser bool
+		setupData      bool
+		expectedStatus int
+	}{
+		{
+			name:           "valid delete with auth",
+			postId:         "1",
+			setContextUser: true,
+			setupData:      true,
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "no auth",
+			postId:         "1",
+			setContextUser: false,
+			setupData:      true,
+			expectedStatus: http.StatusUnauthorized,
+		},
+		{
+			name:           "post not found",
+			postId:         "999",
+			setContextUser: true,
+			setupData:      false,
+			expectedStatus: http.StatusNotFound,
+		},
+		{
+			name:           "invalid post ID",
+			postId:         "abc",
+			setContextUser: true,
+			setupData:      false,
+			expectedStatus: http.StatusBadRequest,
+		},
 	}
-}
 
-func TestUpdatePostWithAuth(t *testing.T) {
-	h := &TestPostHandler{}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := NewTestPostHandler()
+			if tt.setupData {
+				h.posts[1] = &model.Post{ID: 1}
+			}
 
-	req := httptest.NewRequest(http.MethodPut, "/api/posts/1", nil)
-	ctx := context.WithValue(req.Context(), "userID", 1)
-	req = req.WithContext(ctx)
+			req := httptest.NewRequest(http.MethodDelete, "/api/posts/"+tt.postId, nil)
 
-	rec := httptest.NewRecorder()
-	h.HandlePostID(rec, req)
+			if tt.setContextUser {
+				ctx := context.WithValue(req.Context(), "userID", 1)
+				req = req.WithContext(ctx)
+			}
 
-	if rec.Code != http.StatusOK {
-		t.Errorf("Ожидался %d, получено %d", http.StatusOK, rec.Code)
+			rec := httptest.NewRecorder()
+			h.DeletePost(rec, req)
+
+			if rec.Code != tt.expectedStatus {
+				t.Errorf("expected %d, got %d", tt.expectedStatus, rec.Code)
+			}
+		})
 	}
 }
