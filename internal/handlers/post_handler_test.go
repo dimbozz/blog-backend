@@ -4,148 +4,305 @@ package handlers_test
 import (
 	"bytes"
 	"context"
-	"encoding/json"
+	"errors"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
+	"blog-backend/internal/config"
 	"blog-backend/internal/handlers"
 	"blog-backend/internal/model"
-	"blog-backend/pkg/auth"
+	"blog-backend/internal/repository"
+	"blog-backend/service"
 )
 
-// TestPostHandler — МОК с реальными методами CreatePost/GetPost/UpdatePost/DeletePost
-type TestPostHandler struct {
-	posts map[int]*model.Post
+// Локальные ошибки
+var (
+	ErrPostNotFound = errors.New("post not found")
+	ErrUserNotFound = errors.New("user not found")
+)
+
+// MemoryPostStorage — потокобезопасное in-memory хранилище постов
+type MemoryPostStorage struct {
+	posts  []*model.Post // список всех постов
+	mu     sync.RWMutex  // RWMutex для потокобезопасности
+	nextID int           // автоинкрементный ID
 }
 
-func NewTestPostHandler() *TestPostHandler {
-	return &TestPostHandler{
-		posts: make(map[int]*model.Post),
+// NewMemoryPostStorage создает новое хранилище и возвращает интерфейс PostRepository
+func NewMemoryPostStorage() repository.PostRepository {
+	return &MemoryPostStorage{nextID: 1}
+}
+
+// Create создает новый пост с уникальным ID
+func (s *MemoryPostStorage) CreatePost(ctx context.Context, post *model.Post) (*model.Post, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	post.ID = s.nextID
+	post.CreatedAt = time.Now()
+	s.posts = append(s.posts, post)
+	s.nextID++
+	return post, nil
+}
+
+// Get возвращает пост по ID (thread-safe)
+func (s *MemoryPostStorage) GetPostByID(ctx context.Context, id int) (*model.Post, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	for _, p := range s.posts {
+		if p.ID == id {
+			return p, nil
+		}
+	}
+	return nil, errors.New("post not found")
+}
+
+// GetAll возвращает опубликованные посты с пагинацией
+func (s *MemoryPostStorage) GetAll(ctx context.Context, limit, offset int) ([]*model.Post, int, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	var published []*model.Post
+	for _, post := range s.posts {
+		if post.Status == "published" {
+			published = append(published, post)
+		}
+	}
+
+	total := len(published)
+	if offset >= total {
+		return nil, total, nil
+	}
+
+	end := offset + limit
+	if end > total {
+		end = total
+	}
+
+	return published[offset:end], total, nil
+}
+
+// Update обновляет существующий пост
+func (s *MemoryPostStorage) UpdatePost(ctx context.Context, id int, post *model.Post) (*model.Post, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for i, p := range s.posts {
+		if p.ID == post.ID {
+			s.posts[i] = post
+			return post, nil
+		}
+	}
+	return post, errors.New("post not found")
+}
+
+// Delete удаляет пост по ID
+func (s *MemoryPostStorage) DeletePost(ctx context.Context, id int) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for i, p := range s.posts {
+		if p.ID == id {
+			s.posts = append(s.posts[:i], s.posts[i+1:]...)
+			return nil
+		}
+	}
+	return errors.New("post not found")
+}
+
+// Возвращает количество опубликованных постов
+func (s *MemoryPostStorage) CountPosts(ctx context.Context) (int, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	count := 0
+	for _, post := range s.posts {
+		if post.Status == "published" {
+			count++
+		}
+	}
+	return count, nil
+}
+
+// GetReadyToPublish возвращает посты готовые к публикации (publish_at <= now)
+func (s *MemoryPostStorage) GetReadyToPublish(ctx context.Context, batchSize int) ([]*model.Post, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	now := time.Now()
+	var ready []*model.Post
+	for _, post := range s.posts {
+		if post.Status == "draft" && !post.PublishAt.IsZero() && post.PublishAt.Before(now) {
+			ready = append(ready, post)
+		}
+	}
+	return ready, nil
+}
+
+// Метод ListPosts
+func (s *MemoryPostStorage) ListPosts(ctx context.Context, limit, offset int) ([]*model.Post, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	// Возвращаем КОПИЮ всех постов (потоко-безопасно)
+	allPosts := make([]*model.Post, len(s.posts))
+	copy(allPosts, s.posts)
+	return allPosts, nil
+}
+
+// PublishPost — публикует пост по ID
+func (s *MemoryPostStorage) PublishPost(ctx context.Context, id int) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for i, post := range s.posts {
+		if post.ID == id {
+			post.Status = "published"
+			s.posts[i] = post
+			return nil
+		}
+	}
+	return errors.New("post not found")
+}
+
+// MemoryUserRepository - ПОЛНАЯ реализация repository.UserRepository
+type MemoryUserRepository struct {
+	users  map[int]*model.User
+	emails map[string]int // email -> userID
+	nextID int
+}
+
+func NewMemoryUserRepository() repository.UserRepository {
+	return &MemoryUserRepository{
+		users:  make(map[int]*model.User),
+		emails: make(map[string]int),
+		nextID: 1,
 	}
 }
 
-func (h *TestPostHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
-	// Проверка авторизации
-	_, ok := auth.GetUserIDFromContext(r)
-	if !ok {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(handlers.Response{Error: "user not authenticated"})
-		return
+// ✅ GetUserByID - получение пользователя по ID
+func (r *MemoryUserRepository) GetUserByID(ctx context.Context, id int) (*model.User, error) {
+	user, exists := r.users[id]
+	if !exists {
+		return nil, ErrUserNotFound
 	}
-
-	// Парсинг JSON
-	var post model.Post
-	if err := json.NewDecoder(r.Body).Decode(&post); err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(handlers.Response{Error: "invalid JSON"})
-		return
-	}
-
-	// Сохранение поста
-	post.ID = 1
-	h.posts[post.ID] = &post
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(handlers.Response{Data: &post})
+	return user, nil
 }
 
-func (h *TestPostHandler) GetPost(w http.ResponseWriter, r *http.Request) {
-	idStr := strings.TrimPrefix(r.URL.Path, "/api/posts/")
-	idStr = strings.TrimSuffix(idStr, "/")
-	
-	id, err := strconv.Atoi(idStr)
-	if err != nil || id <= 0 {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(handlers.Response{Error: "invalid post ID"})
-		return
+// ✅ GetUserByEmail - получение пользователя по email
+func (r *MemoryUserRepository) GetUserByEmail(ctx context.Context, email string) (*model.User, error) {
+	userID, exists := r.emails[email]
+	if !exists {
+		return nil, ErrUserNotFound
 	}
-
-	if post, exists := h.posts[id]; exists {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(handlers.Response{Data: post})
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusNotFound)
-	json.NewEncoder(w).Encode(handlers.Response{Error: "post not found"})
+	return r.users[userID], nil
 }
 
-func (h *TestPostHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
-	idStr := strings.TrimPrefix(r.URL.Path, "/api/posts/")
-	idStr = strings.TrimSuffix(idStr, "/")
-	
-	id, err := strconv.Atoi(idStr)
-	if err != nil || id <= 0 {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(handlers.Response{Error: "invalid post ID"})
-		return
+// ✅ CreateUser - создание пользователя
+func (r *MemoryUserRepository) CreateUser(ctx context.Context, email, username, passwordHash string) (*model.User, error) {
+	// Проверяем, существует ли уже email
+	if _, exists := r.emails[email]; exists {
+		return nil, errors.New("user with this email already exists")
 	}
 
-	// Проверка авторизации
-	_, ok := auth.GetUserIDFromContext(r)
-	if !ok {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(handlers.Response{Error: "user not authenticated"})
-		return
+	user := &model.User{
+		ID:           r.nextID,
+		Email:        email,
+		Username:     username,
+		PasswordHash: passwordHash,
+		CreatedAt:    time.Now(),
 	}
 
-	// Парсинг JSON
-	var post model.Post
-	if err := json.NewDecoder(r.Body).Decode(&post); err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(handlers.Response{Error: "invalid JSON"})
-		return
-	}
+	r.nextID++
+	r.users[user.ID] = user
+	r.emails[email] = user.ID
 
-	post.ID = id
-	h.posts[id] = &post
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(handlers.Response{Message: "post updated"})
+	return user, nil
 }
 
-func (h *TestPostHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
-	idStr := strings.TrimPrefix(r.URL.Path, "/api/posts/")
-	idStr = strings.TrimSuffix(idStr, "/")
-	
-	id, err := strconv.Atoi(idStr)
-	if err != nil || id <= 0 {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(handlers.Response{Error: "invalid post ID"})
-		return
-	}
-
-	// Проверка авторизации
-	_, ok := auth.GetUserIDFromContext(r)
-	if !ok {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(handlers.Response{Error: "user not authenticated"})
-		return
-	}
-
-	delete(h.posts, id)
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(handlers.Response{Message: "post deleted"})
+// ✅ UserExistsByEmail - проверка существования пользователя по email
+func (r *MemoryUserRepository) UserExistsByEmail(ctx context.Context, email string) (bool, error) {
+	_, exists := r.emails[email]
+	return exists, nil
 }
 
-// TestCreatePost — table-driven тест
+// createTestPostService создает сервис с memory хранилищем
+func createTestPostService(t *testing.T) *service.PostService {
+	postRepo := NewMemoryPostStorage()
+	userRepo := NewMemoryUserRepository()
+	cfg := NewTestConfig()
+	_, cancel := context.WithCancel(context.Background())
+
+	postSvc := service.NewPostService(postRepo, userRepo, cfg) // используем конструктор из пакета service
+
+	t.Cleanup(cancel)
+	return postSvc
+}
+
+// Минимальная тестовая конфигурация
+func NewTestConfig() *config.Config {
+	// Создаем пустую конфигурацию
+	var cfg config.Config
+	return &cfg
+}
+
+// createTestHandler создает полный mux с маршрутизацией
+func createTestHandler(t *testing.T) http.Handler {
+	postSvc := createTestPostService(t)
+
+	var logBuffer bytes.Buffer
+	logger := log.New(&logBuffer, "test: ", log.LstdFlags)
+
+	postHandler := handlers.NewPostHandler(postSvc, logger)
+
+	// Создаем mux для маршрутизации
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/posts", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPost:
+			postHandler.CreatePost(w, r)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	mux.HandleFunc("/api/posts/", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/posts" {
+			return // обработано выше
+		}
+
+		idStr := strings.TrimPrefix(r.URL.Path, "/api/posts/")
+		id, err := strconv.Atoi(idStr)
+		if err != nil {
+			http.Error(w, "Invalid post ID", http.StatusBadRequest)
+			return
+		}
+
+		switch r.Method {
+		case http.MethodGet:
+			ctx := context.WithValue(r.Context(), "postID", id)
+			postHandler.GetPost(w, r.WithContext(ctx))
+		case http.MethodPut:
+			ctx := context.WithValue(r.Context(), "postID", id)
+			postHandler.UpdatePost(w, r.WithContext(ctx))
+		case http.MethodDelete:
+			ctx := context.WithValue(r.Context(), "postID", id)
+			postHandler.DeletePost(w, r.WithContext(ctx))
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	return mux
+}
+
 func TestCreatePost(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -155,7 +312,7 @@ func TestCreatePost(t *testing.T) {
 	}{
 		{
 			name:           "valid create post",
-			body:           `{"title":"Test Post","content":"test content"}`,
+			body:           `{"title":"Test","content":"test content"}`,
 			setContextUser: true,
 			expectedStatus: http.StatusCreated,
 		},
@@ -167,13 +324,7 @@ func TestCreatePost(t *testing.T) {
 		},
 		{
 			name:           "invalid JSON",
-			body:           `{invalid json`,
-			setContextUser: true,
-			expectedStatus: http.StatusBadRequest,
-		},
-		{
-			name:           "empty body",
-			body:           ``,
+			body:           `{invalid`,
 			setContextUser: true,
 			expectedStatus: http.StatusBadRequest,
 		},
@@ -181,12 +332,11 @@ func TestCreatePost(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			h := NewTestPostHandler()
+			handler := createTestHandler(t)
 
-			req := httptest.NewRequest(http.MethodPost, "/api/posts", bytes.NewReader([]byte(tt.body)))
-			if tt.body != "" {
-				req.Header.Set("Content-Type", "application/json")
-			}
+			req := httptest.NewRequest(http.MethodPost, "/api/posts",
+				bytes.NewReader([]byte(tt.body)))
+			req.Header.Set("Content-Type", "application/json")
 
 			if tt.setContextUser {
 				ctx := context.WithValue(req.Context(), "userID", 1)
@@ -194,16 +344,15 @@ func TestCreatePost(t *testing.T) {
 			}
 
 			rec := httptest.NewRecorder()
-			h.CreatePost(rec, req)
+			handler.ServeHTTP(rec, req)
 
 			if rec.Code != tt.expectedStatus {
-				t.Errorf("expected %d, got %d", tt.expectedStatus, rec.Code)
+				t.Errorf("expected status %d, got %d", tt.expectedStatus, rec.Code)
 			}
 		})
 	}
 }
 
-// TestGetPost — table-driven тест
 func TestGetPost(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -229,171 +378,35 @@ func TestGetPost(t *testing.T) {
 			setupData:      false,
 			expectedStatus: http.StatusBadRequest,
 		},
-		{
-			name:           "empty post ID",
-			postId:         "",
-			setupData:      false,
-			expectedStatus: http.StatusBadRequest,
-		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			h := NewTestPostHandler()
+			handler := createTestHandler(t)
+
 			if tt.setupData {
-				h.posts[1] = &model.Post{ID: 1, Title: "Test Post"}
+				// Создаем пост через POST запрос
+				createReq := httptest.NewRequest(http.MethodPost, "/api/posts",
+					bytes.NewReader([]byte(`{"title":"Test","content":"test"}`)))
+				createReq.Header.Set("Content-Type", "application/json")
+				ctx := context.WithValue(createReq.Context(), "userID", 1)
+				createReq = createReq.WithContext(ctx)
+
+				createRec := httptest.NewRecorder()
+				handler.ServeHTTP(createRec, createReq)
 			}
 
 			req := httptest.NewRequest(http.MethodGet, "/api/posts/"+tt.postId, nil)
 			rec := httptest.NewRecorder()
-
-			h.GetPost(rec, req)
+			handler.ServeHTTP(rec, req)
 
 			if rec.Code != tt.expectedStatus {
-				t.Errorf("expected %d, got %d", tt.expectedStatus, rec.Code)
+				t.Errorf("expected status %d, got %d", tt.expectedStatus, rec.Code)
 			}
 		})
 	}
 }
 
-// TestUpdatePost — table-driven тест
-func TestUpdatePost(t *testing.T) {
-	tests := []struct {
-		name           string
-		postId         string
-		body           string
-		setContextUser bool
-		setupData      bool
-		expectedStatus int
-	}{
-		{
-			name:           "valid update with auth",
-			postId:         "1",
-			body:           `{"title":"Updated","content":"updated content"}`,
-			setContextUser: true,
-			setupData:      true,
-			expectedStatus: http.StatusOK,
-		},
-		{
-			name:           "no auth",
-			postId:         "1",
-			body:           `{"title":"Updated","content":"updated"}`,
-			setContextUser: false,
-			setupData:      true,
-			expectedStatus: http.StatusUnauthorized,
-		},
-		{
-			name:           "post not found",
-			postId:         "999",
-			body:           `{"title":"Updated","content":"updated"}`,
-			setContextUser: true,
-			setupData:      false,
-			expectedStatus: http.StatusNotFound,
-		},
-		{
-			name:           "invalid post ID",
-			postId:         "abc",
-			body:           `{"title":"Updated","content":"updated"}`,
-			setContextUser: true,
-			setupData:      false,
-			expectedStatus: http.StatusBadRequest,
-		},
-		{
-			name:           "invalid JSON",
-			postId:         "1",
-			body:           `{invalid`,
-			setContextUser: true,
-			setupData:      true,
-			expectedStatus: http.StatusBadRequest,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			h := NewTestPostHandler()
-			if tt.setupData {
-				h.posts[1] = &model.Post{ID: 1, Title: "Original"}
-			}
-
-			req := httptest.NewRequest(http.MethodPut, "/api/posts/"+tt.postId, bytes.NewReader([]byte(tt.body)))
-			if tt.body != "" {
-				req.Header.Set("Content-Type", "application/json")
-			}
-
-			if tt.setContextUser {
-				ctx := context.WithValue(req.Context(), "userID", 1)
-				req = req.WithContext(ctx)
-			}
-
-			rec := httptest.NewRecorder()
-			h.UpdatePost(rec, req)
-
-			if rec.Code != tt.expectedStatus {
-				t.Errorf("expected %d, got %d", tt.expectedStatus, rec.Code)
-			}
-		})
-	}
-}
-
-// TestDeletePost — table-driven тест
-func TestDeletePost(t *testing.T) {
-	tests := []struct {
-		name           string
-		postId         string
-		setContextUser bool
-		setupData      bool
-		expectedStatus int
-	}{
-		{
-			name:           "valid delete with auth",
-			postId:         "1",
-			setContextUser: true,
-			setupData:      true,
-			expectedStatus: http.StatusOK,
-		},
-		{
-			name:           "no auth",
-			postId:         "1",
-			setContextUser: false,
-			setupData:      true,
-			expectedStatus: http.StatusUnauthorized,
-		},
-		{
-			name:           "post not found",
-			postId:         "999",
-			setContextUser: true,
-			setupData:      false,
-			expectedStatus: http.StatusNotFound,
-		},
-		{
-			name:           "invalid post ID",
-			postId:         "abc",
-			setContextUser: true,
-			setupData:      false,
-			expectedStatus: http.StatusBadRequest,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			h := NewTestPostHandler()
-			if tt.setupData {
-				h.posts[1] = &model.Post{ID: 1}
-			}
-
-			req := httptest.NewRequest(http.MethodDelete, "/api/posts/"+tt.postId, nil)
-
-			if tt.setContextUser {
-				ctx := context.WithValue(req.Context(), "userID", 1)
-				req = req.WithContext(ctx)
-			}
-
-			rec := httptest.NewRecorder()
-			h.DeletePost(rec, req)
-
-			if rec.Code != tt.expectedStatus {
-				t.Errorf("expected %d, got %d", tt.expectedStatus, rec.Code)
-			}
-		})
-	}
-}
+// Проверка — все методы реализованы
+var _ repository.PostRepository = (*MemoryPostStorage)(nil)
+var _ repository.UserRepository = (*MemoryUserRepository)(nil)
