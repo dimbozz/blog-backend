@@ -44,7 +44,7 @@ func (s *CommentService) CreateComment(ctx context.Context, userID int, postID i
 		return nil, fmt.Errorf("content required and max 1000 chars")
 	}
 
-	// ✅ 4. Создаем комментарий
+	// 4. Создаем комментарий
 	comment := &model.Comment{
 		PostID:   postID,
 		AuthorID: userID,
@@ -56,7 +56,7 @@ func (s *CommentService) CreateComment(ctx context.Context, userID int, postID i
 		return nil, fmt.Errorf("failed to create comment: %w", err)
 	}
 
-	// ✅ 5. Возвращаем созданный комментарий
+	// 5. Возвращаем созданный комментарий
 	createdComment, err := s.commentRepo.GetByPostID(ctx, postID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get created comment: %w", err)
@@ -74,12 +74,12 @@ func (s *CommentService) CreateComment(ctx context.Context, userID int, postID i
 
 // GetCommentsByPostID возвращает комментарии поста
 func (s *CommentService) GetCommentsByPostID(ctx context.Context, postID int) ([]*model.Comment, error) {
-	// ✅ Проверяем существование поста
+	// Проверяем существование поста
 	if _, err := s.postRepo.GetPostByID(ctx, postID); err != nil {
 		return nil, fmt.Errorf("post not found: %w", err)
 	}
 
-	// ✅ Получаем комментарии
+	// Получаем комментарии
 	comments, err := s.commentRepo.GetByPostID(ctx, postID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get comments: %w", err)
