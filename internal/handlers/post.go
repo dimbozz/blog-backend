@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"blog-backend/internal/handlers/middleware"
 	"blog-backend/internal/model"
 	"blog-backend/pkg/auth"
 	"blog-backend/service"
@@ -34,43 +33,9 @@ func NewPostHandler(postService *service.PostService, logger *log.Logger) *PostH
 	}
 }
 
-// GET + POST /api/posts
-func (h *PostHandler) HandlePosts(w http.ResponseWriter, r *http.Request) {
-	log.Printf("%s %s", r.Method, r.URL.Path) // Логирование запроса
-	switch r.Method {
-	case http.MethodGet:
-		h.ListPosts(w, r)
-	case http.MethodPost:
-		middleware.AuthMiddleware(h.CreatePost)(w, r)
-	default:
-		h.errorResponse(w, http.StatusMethodNotAllowed, "method not allowed")
-	}
-}
-
-// GET/PUT/DELETE /api/posts/{id}
-func (h *PostHandler) HandlePostID(w http.ResponseWriter, r *http.Request) {
-	log.Printf("%s %s", r.Method, r.URL.Path) // Логирование запроса
-	idStr := strings.TrimPrefix(r.URL.Path, "/api/posts/")
-	idStr = strings.TrimSuffix(idStr, "/")
-	if idStr == "" || idStr == "/" {
-		h.errorResponse(w, http.StatusBadRequest, "post ID required")
-		return
-	}
-
-	switch r.Method {
-	case http.MethodGet:
-		h.GetPost(w, r)
-	case http.MethodPut:
-		middleware.AuthMiddleware(h.UpdatePost)(w, r)
-	case http.MethodDelete:
-		middleware.AuthMiddleware(h.DeletePost)(w, r)
-	default:
-		h.errorResponse(w, http.StatusMethodNotAllowed, "method not allowed")
-	}
-}
-
 // CreatePost создает новый пост (требуется авторизация)
 func (h *PostHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
+	log.Printf("%s %s", r.Method, r.URL.Path) // Логирование запроса
 	userID, ok := auth.GetUserIDFromContext(r)
 	if !ok {
 		h.errorResponse(w, http.StatusUnauthorized, "user not authenticated")
@@ -97,6 +62,7 @@ func (h *PostHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 
 // GetPost возвращает пост по ID (публичный доступ)
 func (h *PostHandler) GetPost(w http.ResponseWriter, r *http.Request) {
+	log.Printf("%s %s", r.Method, r.URL.Path) // Логирование запроса
 	idStr := strings.TrimPrefix(r.URL.Path, "/api/posts/")
 	idStr = strings.TrimSuffix(idStr, "/")
 	if idStr == "" || idStr == "/" {
@@ -106,7 +72,7 @@ func (h *PostHandler) GetPost(w http.ResponseWriter, r *http.Request) {
 
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		h.errorResponse(w, http.StatusBadRequest, "invalid post ID")
+		h.errorResponse(w, http.StatusBadRequest, "invalid post ID GetPost")
 		return
 	}
 
@@ -124,6 +90,7 @@ func (h *PostHandler) GetPost(w http.ResponseWriter, r *http.Request) {
 
 // UpdatePost обновляет пост (только автор)
 func (h *PostHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
+	log.Printf("%s %s", r.Method, r.URL.Path) // Логирование запроса
 	userID, ok := auth.GetUserIDFromContext(r)
 	if !ok {
 		h.errorResponse(w, http.StatusUnauthorized, "user not authenticated")
@@ -139,7 +106,7 @@ func (h *PostHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		h.errorResponse(w, http.StatusBadRequest, "invalid post ID")
+		h.errorResponse(w, http.StatusBadRequest, "invalid post ID UpdatePost")
 		return
 	}
 
@@ -168,6 +135,7 @@ func (h *PostHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 
 // DeletePost удаляет пост (только автор)
 func (h *PostHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
+	log.Printf("%s %s", r.Method, r.URL.Path) // Логирование запроса
 	userID, ok := auth.GetUserIDFromContext(r)
 	if !ok {
 		h.errorResponse(w, http.StatusUnauthorized, "user not authenticated")
@@ -183,7 +151,7 @@ func (h *PostHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
 
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		h.errorResponse(w, http.StatusBadRequest, "invalid post ID")
+		h.errorResponse(w, http.StatusBadRequest, "invalid post ID DeletePost")
 		return
 	}
 

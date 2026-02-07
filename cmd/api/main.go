@@ -60,12 +60,15 @@ func main() {
 	// Настройка HTTP маршрутов для постов
 	// GET /api/posts — получить список постов (доступно всем)
 	// POST /api/posts — создать пост (только авторизованный пользователь)
-	http.HandleFunc("/api/posts", postHandler.HandlePosts)
+	http.HandleFunc("GET /api/posts", postHandler.GetPost)
+	http.HandleFunc("POST /api/posts", middleware.AuthMiddleware(postHandler.CreatePost))
 
-	// GET /api/posts/{id} — получить один пост
-	// PUT /api/posts/{id} — обновить пост (только автор)
-	// DELETE /api/posts/{id} — удалить пост (только автор)
-	http.HandleFunc("/api/posts/", postHandler.HandlePostID)
+	// GET /api/posts/{postid} — получить один пост
+	// PUT /api/posts/{postid} — обновить пост (только автор)
+	// DELETE /api/posts/{postid} — удалить пост (только автор)
+	http.HandleFunc("GET /api/posts/{postid}", postHandler.GetPost)
+	http.HandleFunc("PUT /api/posts/{postid}", middleware.AuthMiddleware(postHandler.UpdatePost))
+	http.HandleFunc("DELETE /api/posts/{postid}", middleware.AuthMiddleware(postHandler.DeletePost))
 
 	// Настройка HTTP маршрутов для комментариев
 	http.HandleFunc("POST /api/posts/{postId}/comments", middleware.AuthMiddleware(commentHandler.CreateComment))
@@ -84,7 +87,7 @@ func main() {
 		log.Printf("📝 Register: POST http://localhost:%s/api/register", port)
 		log.Printf("🔐 Login: POST http://localhost:%s/api/login", port)
 		log.Printf("👤 Profile: GET http://localhost:%s/api/profile (requires token)", port)
-		log.Printf("❤️  Health: GET http://localhost:%s/api/health", port)
+		log.Printf("❤️ Health: GET http://localhost:%s/api/health", port)
 
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Server failed: %v", err)

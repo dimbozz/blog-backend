@@ -32,7 +32,7 @@ func (h *CommentHandler) CreateComment(w http.ResponseWriter, r *http.Request) {
 	postId := r.PathValue("postId")
 	postID, err := strconv.Atoi(postId)
 	if err != nil {
-		http.Error(w, "invalid post ID", http.StatusBadRequest)
+		http.Error(w, "invalid post ID CreateComment", http.StatusBadRequest)
 		return
 	}
 
