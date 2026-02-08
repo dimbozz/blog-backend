@@ -3,14 +3,12 @@ package handlers
 import (
 	"blog-backend/internal/repository"
 	"encoding/json"
-	"log"
 	"net/http"
 )
 
 // HealthHandler проверяет состояние сервиса
 func HealthHandler(repo repository.HealthChecker) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("%s %s", r.Method, r.URL.Path) // Логирование запроса
 		// Проверяем подключение к БД
 		if err := repo.HealthCheck(r.Context()); err != nil {
 			http.Error(w, "Database connection failed", http.StatusServiceUnavailable)

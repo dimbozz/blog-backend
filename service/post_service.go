@@ -145,7 +145,7 @@ func (s *PostService) CreatePost(ctx context.Context, currentUserID int, post *m
 			post.Status = "published"
 			// log.Printf("AUTO-PUBLISHED: %s", post.Title)
 		} else {
-			// Будущее = draft (явно устанавливаем!)
+			// Будущее = draft
 			post.Status = "draft"
 			// log.Printf("⏳ SCHEDULED AS DRAFT: %s", post.Title)
 		}

@@ -48,7 +48,6 @@ func TestPostService_PublishLogic(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			publishTime := time.Now().Add(tt.publishAtDelta)
-			// log.Printf("TEST: %s, PublishAt=%v, Now=%v", tt.name, publishTime, time.Now())
 			post := &model.Post{
 				Title:     tt.name,
 				Content:   "test content",
@@ -60,8 +59,6 @@ func TestPostService_PublishLogic(t *testing.T) {
 			if err != nil {
 				t.Fatalf("CreatePost failed: %v", err)
 			}
-
-			// log.Printf("AFTER CreatePost: Status=%q, PublishAt=%v", created.Status, created.PublishAt)
 
 			if created.Status != tt.expectedStatus {
 				t.Errorf("expected status %q, got %q", tt.expectedStatus, created.Status)

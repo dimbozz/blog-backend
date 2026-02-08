@@ -85,7 +85,15 @@ func main() {
 	srv := &http.Server{
 		Addr:    ":" + port,
 		Handler: handler, // mux с middleware
+		// Graceful shutdown настройки
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  120 * time.Second,
 	}
+
+	// Канал для сигналов завершения
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 
 	// Запускаем отдельную горутину с сервером
 	go func() {
@@ -100,13 +108,11 @@ func main() {
 		}
 	}()
 
-	// Блокируем main() до сигнала Ctrl+C
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+	// 6. Ждем сигнал завершения
 	<-quit
 	log.Println("🛑 Shutdown signal received, starting graceful shutdown...")
 
-	// Timeout контекст (30 секунд)
+	// Graceful shutdown с таймаутом
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 

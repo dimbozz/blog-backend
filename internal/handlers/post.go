@@ -35,7 +35,6 @@ func NewPostHandler(postService *service.PostService, logger *log.Logger) *PostH
 
 // CreatePost создает новый пост (требуется авторизация)
 func (h *PostHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
-	log.Printf("%s %s", r.Method, r.URL.Path) // Логирование запроса
 	userID, ok := auth.GetUserIDFromContext(r)
 	if !ok {
 		h.errorResponse(w, http.StatusUnauthorized, "user not authenticated")
@@ -62,7 +61,6 @@ func (h *PostHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 
 // GetPost возвращает пост по ID (публичный доступ)
 func (h *PostHandler) GetPost(w http.ResponseWriter, r *http.Request) {
-	log.Printf("%s %s", r.Method, r.URL.Path) // Логирование запроса
 	idStr := strings.TrimPrefix(r.URL.Path, "/api/posts/")
 	idStr = strings.TrimSuffix(idStr, "/")
 	if idStr == "" || idStr == "/" {
@@ -90,7 +88,6 @@ func (h *PostHandler) GetPost(w http.ResponseWriter, r *http.Request) {
 
 // UpdatePost обновляет пост (только автор)
 func (h *PostHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
-	log.Printf("%s %s", r.Method, r.URL.Path) // Логирование запроса
 	userID, ok := auth.GetUserIDFromContext(r)
 	if !ok {
 		h.errorResponse(w, http.StatusUnauthorized, "user not authenticated")
@@ -154,7 +151,6 @@ func (h *PostHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 
 // DeletePost удаляет пост (только автор)
 func (h *PostHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
-	log.Printf("%s %s", r.Method, r.URL.Path) // Логирование запроса
 
 	userID, ok := auth.GetUserIDFromContext(r)
 	if !ok {
@@ -196,7 +192,6 @@ func (h *PostHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
 
 // ListPosts возвращает все посты с пагинацией
 func (h *PostHandler) ListPosts(w http.ResponseWriter, r *http.Request) {
-	log.Printf("%s %s", r.Method, r.URL.Path) // Логирование запроса
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
 	if limit == 0 {
 		limit = 10
