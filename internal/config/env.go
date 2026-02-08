@@ -59,6 +59,12 @@ func Load() *Config {
 		log.Fatal("POST_BATCH_SIZE invalid (must be 10-100)")
 	}
 
+	// SchedulerEnabled
+	schedulerEnabled, err := strconv.ParseBool(GetEnv("SCHEDULER_ENABLED", "true"))
+	if err != nil {
+		log.Fatal("SCHEDULER_ENABLED invalid")
+	}
+
 	// Создаём конфиг из переменных окружения
 	cfg := &Config{
 		DBHost:      GetEnv("DB_HOST", "localhost"),
@@ -71,6 +77,7 @@ func Load() *Config {
 		Environment: GetEnv("ENVIRONMENT", "development"),
 
 		// Планировщик из .env
+		SchedulerEnabled:   schedulerEnabled,
 		PostTickerDuration: tickerDuration,
 		PostWorkersCount:   workersCount,
 		PostBatchSize:      batchSize,
