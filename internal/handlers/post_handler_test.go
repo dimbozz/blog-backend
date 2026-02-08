@@ -254,8 +254,7 @@ func createTestPostService(t *testing.T) *service.PostService {
 func NewTestConfig() *config.Config {
 	// Создаем пустую конфигурацию
 	cfg := &config.Config{
-		PostTickerDuration: 30 * time.Second,
-		SchedulerEnabled:   false,
+		SchedulerEnabled: false,
 	}
 	return cfg
 }

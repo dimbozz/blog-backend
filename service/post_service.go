@@ -29,15 +29,22 @@ type PostService struct {
 // Создаем сервис с репозиториями
 func NewPostService(postRepo repository.PostRepository, userRepo repository.UserRepository, cfg *config.Config) *PostService {
 	ctx, cancel := context.WithCancel(context.Background())
+
+	// 30s по умолчанию, если cfg.PostTickerDuration <= 0
+	tickerDuration := cfg.PostTickerDuration
+	if tickerDuration <= 0 {
+		tickerDuration = 30 * time.Second
+	}
+
 	s := &PostService{
 		postRepo:       postRepo,
 		userRepo:       userRepo,
 		ctx:            ctx,
 		cancel:         cancel,
-		ticker:         time.NewTicker(cfg.PostTickerDuration), // Из .env
-		tickerDuration: cfg.PostTickerDuration,                 // Из .env
-		workersCount:   cfg.PostWorkersCount,                   // Из .env
-		batchSize:      cfg.PostBatchSize,                      // Из .env
+		ticker:         time.NewTicker(tickerDuration), // Из .env
+		tickerDuration: cfg.PostTickerDuration,         // Из .env
+		workersCount:   cfg.PostWorkersCount,           // Из .env
+		batchSize:      cfg.PostBatchSize,              // Из .env
 	}
 
 	// Запуск планировщика только если флаг включен
