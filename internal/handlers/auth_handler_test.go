@@ -12,7 +12,6 @@ import (
 
 	"blog-backend/internal/handlers"
 	"blog-backend/internal/repository"
-	"blog-backend/pkg/jwt"
 	"blog-backend/service"
 )
 
@@ -53,7 +52,7 @@ func TestRegisterHandler(t *testing.T) {
 	tests := []struct {
 		name           string
 		body           string
-		setupUser      bool
+		setupUser      bool // создавать пользователя да/нет (true/false)
 		expectedStatus int
 	}{
 		{
@@ -113,50 +112,34 @@ func TestLoginHandler(t *testing.T) {
 	tests := []struct {
 		name           string
 		body           string
-		setupUser      bool
 		expectedStatus int
 	}{
 		{
 			name:           "valid_login",
 			body:           `{"email": "test@example.com", "password": "password123"}`,
-			setupUser:      true,
 			expectedStatus: http.StatusOK, // 200 + JWT token
 		},
 		{
 			name:           "user_not_found",
 			body:           `{"email": "unknown@example.com", "password": "pass"}`,
-			setupUser:      false,
 			expectedStatus: http.StatusUnauthorized, // 401
 		},
 		{
 			name:           "wrong_password",
 			body:           `{"email": "test@example.com", "password": "wrongpass"}`,
-			setupUser:      true,
 			expectedStatus: http.StatusUnauthorized, // 401
 		},
 		{
 			name:           "invalid_json",
 			body:           `{invalid`,
-			setupUser:      false,
 			expectedStatus: http.StatusBadRequest, // 400
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Создаем userRepo с пользователем "email": "test@example.com" "username": "testuser" "password": "password123"
 			userRepo := NewMemoryUserRepository()
-
-			if tt.setupUser {
-				ctx := context.Background()
-				password := "password123"
-
-				// Используем jwt.HashPassword()
-				hash, err := jwt.HashPassword(password)
-				if err != nil {
-					t.Fatalf("jwt.HashPassword error: %v", err)
-				}
-				userRepo.CreateUser(ctx, "test@example.com", "testuser", hash)
-			}
 
 			router, _ := setupAuthTestRouterWithRepo(userRepo)
 			req := httptest.NewRequest(http.MethodPost, "/api/auth/login",
