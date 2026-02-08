@@ -1,4 +1,4 @@
-//service/post_service.go
+// service/post_service.go
 package service
 
 import (
