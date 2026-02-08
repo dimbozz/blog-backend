@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -383,7 +384,155 @@ func TestGetPost(t *testing.T) {
 	}
 }
 
+// TestUpdatePost проверяет обновление поста
+func TestUpdatePost(t *testing.T) {
+	tests := []struct {
+		name           string
+		body           string
+		setupPost      bool
+		expectedStatus int
+	}{
+		{
+			name:           "valid_update",
+			body:           `{"title": "Updated Post", "content": "Updated content"}`,
+			setupPost:      true,
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "post_not_found",
+			body:           `{"title": "Updated"}`,
+			setupPost:      false,
+			expectedStatus: http.StatusNotFound,
+		},
+		{
+			name:           "invalid_JSON",
+			body:           `{invalid json`,
+			setupPost:      true,
+			expectedStatus: http.StatusBadRequest,
+		},
+	}
 
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			router, postRepo := setupTestRouter()
+
+			if tt.setupPost {
+				// Создаем пост для обновления
+				ctx := context.Background()
+				post := &model.Post{
+					Title:    "Old Post",
+					Content:  "old content",
+					AuthorID: 1,
+				}
+				postRepo.CreatePost(ctx, post)
+			}
+
+			req := httptest.NewRequest(http.MethodPut, "/api/posts/1",
+				bytes.NewBuffer([]byte(tt.body)))
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", "Bearer dummy")
+
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, req)
+
+			if w.Code != tt.expectedStatus {
+				t.Errorf("expected %d, got %d", tt.expectedStatus, w.Code)
+			}
+		})
+	}
+}
+
+// TestDeletePost проверяет удаление поста
+func TestDeletePost(t *testing.T) {
+	tests := []struct {
+		name           string
+		setupPost      bool
+		expectedStatus int
+	}{
+		{
+			name:           "valid_delete",
+			setupPost:      true,
+			expectedStatus: http.StatusOK, // 200
+		},
+		{
+			name:           "post_not_found",
+			setupPost:      false,
+			expectedStatus: http.StatusNotFound,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			router, postRepo := setupTestRouter()
+
+			if tt.setupPost {
+				ctx := context.Background()
+				post := &model.Post{
+					Title:    "Old Post",
+					Content:  "old content",
+					AuthorID: 1,
+				}
+				postRepo.CreatePost(ctx, post)
+			}
+
+			req := httptest.NewRequest(http.MethodDelete, "/api/posts/1", nil)
+			req.Header.Set("Authorization", "Bearer dummy")
+
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, req)
+
+			if w.Code != tt.expectedStatus {
+				t.Errorf("expected %d, got %d", tt.expectedStatus, w.Code)
+			}
+		})
+	}
+}
+
+// TestListPosts проверяет список постов
+func TestListPosts(t *testing.T) {
+	tests := []struct {
+		name           string
+		setupPosts     int
+		expectedStatus int
+	}{
+		{
+			name:           "empty_list",
+			setupPosts:     0,
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "with_posts",
+			setupPosts:     2,
+			expectedStatus: http.StatusOK,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			router, postRepo := setupTestRouter()
+
+			// Создаем посты для теста
+			ctx := context.Background()
+			for i := 0; i < tt.setupPosts; i++ {
+				post := &model.Post{
+					ID:       i + 1,
+					Title:    "List Post " + strconv.Itoa(i+1),
+					AuthorID: 1,
+					Status:   "published",
+				}
+				postRepo.CreatePost(ctx, post)
+			}
+
+			req := httptest.NewRequest(http.MethodGet, "/api/posts", nil)
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, req)
+
+			if w.Code != tt.expectedStatus {
+				t.Errorf("expected %d, got %d", tt.expectedStatus, w.Code)
+			}
+		})
+	}
+}
 
 // Интерфейсы реализованы
 var _ repository.PostRepository = (*MemoryPostStorage)(nil)

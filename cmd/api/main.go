@@ -60,7 +60,7 @@ func main() {
 	// Настройка HTTP маршрутов для постов
 	// GET /api/posts — получить список постов (доступно всем)
 	// POST /api/posts — создать пост (только авторизованный пользователь)
-	http.HandleFunc("GET /api/posts", postHandler.GetPost)
+	http.HandleFunc("GET /api/posts", postHandler.ListPosts)
 	http.HandleFunc("POST /api/posts", middleware.AuthMiddleware(postHandler.CreatePost))
 
 	// GET /api/posts/{postid} — получить один пост

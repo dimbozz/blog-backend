@@ -97,6 +97,7 @@ func (h *PostHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Парсим ID из URL
 	idStr := strings.TrimPrefix(r.URL.Path, "/api/posts/")
 	idStr = strings.TrimSuffix(idStr, "/")
 	if idStr == "" || idStr == "/" {
@@ -106,21 +107,39 @@ func (h *PostHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		h.errorResponse(w, http.StatusBadRequest, "invalid post ID UpdatePost")
+		h.errorResponse(w, http.StatusBadRequest, "invalid post ID Invalid post ID while updating a post")
 		return
 	}
 
-	var post model.Post
-	if err := json.NewDecoder(r.Body).Decode(&post); err != nil {
+	// Парсим поля для обновления (кроме ID)
+	var updateData struct {
+		Title   string `json:"title"`
+		Content string `json:"content"`
+		Status  string `json:"status,omitempty"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&updateData); err != nil {
 		h.errorResponse(w, http.StatusBadRequest, "invalid JSON")
 		return
 	}
 
-	updatedPost, err := h.postService.UpdatePost(r.Context(), userID, id, &post)
+	// Создаем post с ID из URL
+	postToUpdate := &model.Post{
+		ID:      id,
+		Title:   updateData.Title,
+		Content: updateData.Content,
+		Status:  updateData.Status,
+	}
+
+	updatedPost, err := h.postService.UpdatePost(r.Context(), userID, id, postToUpdate)
 	if err != nil {
-		if err.Error() == "permission denied: can only update own posts" {
+		// Ловим ВСЕ ошибки сервиса
+		switch {
+		case strings.Contains(err.Error(), "post not found"):
+			h.errorResponse(w, http.StatusNotFound, "post not found")
+		case strings.Contains(err.Error(), "permission denied"):
 			h.errorResponse(w, http.StatusForbidden, "permission denied")
-		} else {
+		default:
 			h.log.Printf("update post %d failed: %v", id, err)
 			h.errorResponse(w, http.StatusInternalServerError, "internal server error")
 		}
@@ -136,12 +155,14 @@ func (h *PostHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 // DeletePost удаляет пост (только автор)
 func (h *PostHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
 	log.Printf("%s %s", r.Method, r.URL.Path) // Логирование запроса
+
 	userID, ok := auth.GetUserIDFromContext(r)
 	if !ok {
 		h.errorResponse(w, http.StatusUnauthorized, "user not authenticated")
 		return
 	}
 
+	// Парсим ID из URL
 	idStr := strings.TrimPrefix(r.URL.Path, "/api/posts/")
 	idStr = strings.TrimSuffix(idStr, "/")
 	if idStr == "" || idStr == "/" {
@@ -151,23 +172,26 @@ func (h *PostHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
 
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		h.errorResponse(w, http.StatusBadRequest, "invalid post ID DeletePost")
+		h.errorResponse(w, http.StatusBadRequest, "invalid post ID while deleting a post")
 		return
 	}
 
+	// Обработка ошибок сервиса
 	if err := h.postService.DeletePost(r.Context(), userID, id); err != nil {
-		if err.Error() == "permission denied: can only delete own posts" {
+		switch {
+		case strings.Contains(err.Error(), "post not found"):
+			h.errorResponse(w, http.StatusNotFound, "post not found")
+		case strings.Contains(err.Error(), "permission denied"):
 			h.errorResponse(w, http.StatusForbidden, "permission denied")
-		} else {
+		default:
 			h.log.Printf("delete post %d failed: %v", id, err)
 			h.errorResponse(w, http.StatusInternalServerError, "internal server error")
 		}
 		return
 	}
 
-	h.successResponse(w, http.StatusOK, Response{
-		Message: "post deleted successfully",
-	})
+	// 204 No Content для DELETE
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // ListPosts возвращает все посты с пагинацией
