@@ -12,6 +12,7 @@ import (
 
 	"blog-backend/internal/handlers"
 	"blog-backend/internal/repository"
+	"blog-backend/pkg/jwt"
 	"blog-backend/service"
 )
 
@@ -25,6 +26,19 @@ func setupAuthTestRouter() (http.Handler, repository.UserRepository) {
 	userSvc := service.NewUserService(userRepo)
 	logger := log.New(io.Discard, "", 0)
 
+	userHandler := handlers.NewUserHandler(userSvc, logger)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("POST /api/auth/register", userHandler.RegisterHandler)
+	mux.HandleFunc("POST /api/auth/login", userHandler.LoginHandler)
+
+	return mux, userRepo
+}
+
+// setupAuthTestRouterWithRepo - использует существующий repo
+func setupAuthTestRouterWithRepo(userRepo repository.UserRepository) (http.Handler, repository.UserRepository) {
+	userSvc := service.NewUserService(userRepo)
+	logger := log.New(io.Discard, "", 0)
 	userHandler := handlers.NewUserHandler(userSvc, logger)
 
 	mux := http.NewServeMux()
@@ -130,15 +144,21 @@ func TestLoginHandler(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			router, userRepo := setupAuthTestRouter()
+			userRepo := NewMemoryUserRepository()
 
-			// Создаем тестового пользователя для валидного логина
 			if tt.setupUser {
 				ctx := context.Background()
-				// Пароль "password123" → хеш для jwt.CheckPassword()
-				userRepo.CreateUser(ctx, "test@example.com", "testuser", "password123_hash")
+				password := "password123"
+
+				// Используем jwt.HashPassword()
+				hash, err := jwt.HashPassword(password)
+				if err != nil {
+					t.Fatalf("jwt.HashPassword error: %v", err)
+				}
+				userRepo.CreateUser(ctx, "test@example.com", "testuser", hash)
 			}
 
+			router, _ := setupAuthTestRouterWithRepo(userRepo)
 			req := httptest.NewRequest(http.MethodPost, "/api/auth/login",
 				bytes.NewBuffer([]byte(tt.body)))
 			req.Header.Set("Content-Type", "application/json")
@@ -148,7 +168,7 @@ func TestLoginHandler(t *testing.T) {
 
 			if w.Code != tt.expectedStatus {
 				bodyBytes, _ := io.ReadAll(w.Body)
-				t.Logf("Status: %d, Body: %s", w.Code, string(bodyBytes))
+				t.Logf("🌐 REQUEST RESULT: Status=%d, Body='%s'", w.Code, string(bodyBytes))
 				t.Errorf("expected %d, got %d", tt.expectedStatus, w.Code)
 			}
 		})

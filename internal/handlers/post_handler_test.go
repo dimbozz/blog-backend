@@ -18,6 +18,7 @@ import (
 	"blog-backend/internal/handlers"
 	"blog-backend/internal/model"
 	"blog-backend/internal/repository"
+	"blog-backend/pkg/jwt"
 	"blog-backend/service"
 )
 
@@ -186,7 +187,13 @@ func NewMemoryUserRepository() repository.UserRepository {
 		nextID: 1,
 	}
 	// Создаем тестового пользователя ID=1
-	r.CreateUser(context.Background(), "test@example.com", "testuser", "hash")
+	hash, _ := jwt.HashPassword("password123")
+	r.CreateUser(
+		context.Background(),
+		"test@example.com",
+		"testuser",
+		hash,
+	)
 	return r
 }
 
