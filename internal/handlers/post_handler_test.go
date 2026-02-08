@@ -452,7 +452,7 @@ func TestDeletePost(t *testing.T) {
 		{
 			name:           "valid_delete",
 			setupPost:      true,
-			expectedStatus: http.StatusOK, // 200
+			expectedStatus: http.StatusNoContent, // 204
 		},
 		{
 			name:           "post_not_found",
