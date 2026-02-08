@@ -188,7 +188,7 @@ func NewMemoryUserRepository() repository.UserRepository {
 	}
 }
 
-// ✅ GetUserByID - получение пользователя по ID
+// Получение пользователя по ID
 func (r *MemoryUserRepository) GetUserByID(ctx context.Context, id int) (*model.User, error) {
 	user, exists := r.users[id]
 	if !exists {
@@ -197,7 +197,7 @@ func (r *MemoryUserRepository) GetUserByID(ctx context.Context, id int) (*model.
 	return user, nil
 }
 
-// ✅ GetUserByEmail - получение пользователя по email
+// Получение пользователя по email
 func (r *MemoryUserRepository) GetUserByEmail(ctx context.Context, email string) (*model.User, error) {
 	userID, exists := r.emails[email]
 	if !exists {
@@ -206,7 +206,7 @@ func (r *MemoryUserRepository) GetUserByEmail(ctx context.Context, email string)
 	return r.users[userID], nil
 }
 
-// ✅ CreateUser - создание пользователя
+// Создание пользователя
 func (r *MemoryUserRepository) CreateUser(ctx context.Context, email, username, passwordHash string) (*model.User, error) {
 	// Проверяем, существует ли уже email
 	if _, exists := r.emails[email]; exists {
@@ -255,30 +255,33 @@ func NewTestConfig() *config.Config {
 	// Создаем пустую конфигурацию
 	cfg := &config.Config{
 		PostTickerDuration: 30 * time.Second,
+		SchedulerEnabled:   false,
 	}
 	return cfg
 }
 
-// createTestHandler создает полный mux с маршрутизацией
 func createTestHandler(t *testing.T) http.Handler {
-	var logBuffer bytes.Buffer
-	silentLogger := log.New(&logBuffer, "test: ", log.LstdFlags)
-
 	postSvc := createTestPostService(t)
-
+	silentLogger := log.New(io.Discard, "", 0)
 	postHandler := handlers.NewPostHandler(postSvc, silentLogger)
 
-	// Создаем mux для маршрутизации
 	mux := http.NewServeMux()
+
+	// /api/posts - GET + POST
 	mux.HandleFunc("/api/posts", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
+		case http.MethodGet:
+			postHandler.ListPosts(w, r) // Список постов
 		case http.MethodPost:
-			postHandler.CreatePost(w, r)
+			// Mock AuthMiddleware
+			ctx := context.WithValue(r.Context(), "userID", interface{}(1))
+			postHandler.CreatePost(w, r.WithContext(ctx))
 		default:
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	})
 
+	// /api/posts/{id} - CRUD
 	mux.HandleFunc("/api/posts/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/api/posts" {
 			return // обработано выше
@@ -287,19 +290,19 @@ func createTestHandler(t *testing.T) http.Handler {
 		idStr := strings.TrimPrefix(r.URL.Path, "/api/posts/")
 		id, err := strconv.Atoi(idStr)
 		if err != nil {
-			http.Error(w, "Invalid post ID", http.StatusBadRequest)
+			http.Error(w, "Invalid ID", http.StatusBadRequest)
 			return
 		}
 
+		ctx := context.WithValue(r.Context(), "postID", id)
 		switch r.Method {
 		case http.MethodGet:
-			ctx := context.WithValue(r.Context(), "postID", id)
 			postHandler.GetPost(w, r.WithContext(ctx))
 		case http.MethodPut:
-			ctx := context.WithValue(r.Context(), "postID", id)
+			ctx := context.WithValue(r.Context(), "userID", interface{}(1))
 			postHandler.UpdatePost(w, r.WithContext(ctx))
 		case http.MethodDelete:
-			ctx := context.WithValue(r.Context(), "postID", id)
+			ctx := context.WithValue(r.Context(), "userID", interface{}(1))
 			postHandler.DeletePost(w, r.WithContext(ctx))
 		default:
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -320,7 +323,7 @@ func TestCreatePost(t *testing.T) {
 	}{
 		{
 			name: "valid create post",
-			url:  "/api/posts", // ✅ URL
+			url:  "/api/posts", // URL
 			body: `{
 				"title": "Test Post",
 				"content": "Test content", 
@@ -354,7 +357,7 @@ func TestCreatePost(t *testing.T) {
 			req.Header.Set("Content-Type", "application/json")
 
 			if tt.setContextUser {
-				ctx := context.WithValue(req.Context(), "userID", interface{}(1))
+				ctx := context.WithValue(req.Context(), "userID", 1)
 				req = req.WithContext(ctx)
 			}
 

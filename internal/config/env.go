@@ -29,6 +29,7 @@ type Config struct {
 	Environment string `mapstructure:"ENVIRONMENT"`
 
 	// Настройки планировщика
+	SchedulerEnabled   bool          `mapstructure:"SCHEDULER_ENABLED"`
 	PostTickerDuration time.Duration `mapstructure:"POST_TICKER_DURATION"`
 	PostWorkersCount   int           `mapstructure:"POST_WORKERS_COUNT"`
 	PostBatchSize      int           `mapstructure:"POST_BATCH_SIZE"`

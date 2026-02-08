@@ -17,6 +17,7 @@ func TestPostService_PublishLogic(t *testing.T) {
 	userRepo := NewMockUserRepo()
 	testConfig := &config.Config{
 		PostTickerDuration: 30 * time.Second,
+		SchedulerEnabled:   true,
 	}
 
 	svc := service.NewPostService(memoryRepo, userRepo, testConfig)

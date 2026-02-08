@@ -40,12 +40,15 @@ func NewPostService(postRepo repository.PostRepository, userRepo repository.User
 		batchSize:      cfg.PostBatchSize,                      // Из .env
 	}
 
-	s.StartScheduler()
+	// Запуск планировщика только если флаг включен
+	if cfg.SchedulerEnabled {
+		s.startScheduler()
+	}
 	return s
 }
 
 // Запуск планировщика
-func (s *PostService) StartScheduler() {
+func (s *PostService) startScheduler() {
 	s.wg.Add(1)
 	go s.scheduler()
 }
