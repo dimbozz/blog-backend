@@ -30,6 +30,8 @@ func main() {
 	}
 	defer db.Close()
 
+	// 1. Создаем mux
+	mux := http.NewServeMux()
 	// Создаём слои снизу вверх (Repository → Service → Handler)
 	// Каждый слой зависит только от интерфейса предыдущего
 
@@ -52,33 +54,37 @@ func main() {
 	commentHandler := handlers.NewCommentHandler(commentService)
 
 	// Настройка HTTP маршрутов для пользователей
-	http.HandleFunc("/api/register", userHandler.RegisterHandler)
-	http.HandleFunc("/api/login", userHandler.LoginHandler)
-	http.HandleFunc("/api/profile", middleware.AuthMiddleware(userHandler.ProfileHandler))
-	http.HandleFunc("/api/health", handlers.HealthHandler(userRepo))
+	mux.HandleFunc("/api/register", userHandler.RegisterHandler)
+	mux.HandleFunc("/api/login", userHandler.LoginHandler)
+	mux.HandleFunc("/api/profile", middleware.AuthMiddleware(userHandler.ProfileHandler))
+	mux.HandleFunc("/api/health", handlers.HealthHandler(userRepo))
 
 	// Настройка HTTP маршрутов для постов
 	// GET /api/posts — получить список постов (доступно всем)
 	// POST /api/posts — создать пост (только авторизованный пользователь)
-	http.HandleFunc("GET /api/posts", postHandler.ListPosts)
-	http.HandleFunc("POST /api/posts", middleware.AuthMiddleware(postHandler.CreatePost))
+	mux.HandleFunc("GET /api/posts", postHandler.ListPosts)
+	mux.HandleFunc("POST /api/posts", middleware.AuthMiddleware(postHandler.CreatePost))
 
 	// GET /api/posts/{postid} — получить один пост
 	// PUT /api/posts/{postid} — обновить пост (только автор)
 	// DELETE /api/posts/{postid} — удалить пост (только автор)
-	http.HandleFunc("GET /api/posts/{postid}", postHandler.GetPost)
-	http.HandleFunc("PUT /api/posts/{postid}", middleware.AuthMiddleware(postHandler.UpdatePost))
-	http.HandleFunc("DELETE /api/posts/{postid}", middleware.AuthMiddleware(postHandler.DeletePost))
+	mux.HandleFunc("GET /api/posts/{postid}", postHandler.GetPost)
+	mux.HandleFunc("PUT /api/posts/{postid}", middleware.AuthMiddleware(postHandler.UpdatePost))
+	mux.HandleFunc("DELETE /api/posts/{postid}", middleware.AuthMiddleware(postHandler.DeletePost))
 
 	// Настройка HTTP маршрутов для комментариев
-	http.HandleFunc("POST /api/posts/{postId}/comments", middleware.AuthMiddleware(commentHandler.CreateComment))
-	http.HandleFunc("GET /api/posts/{postId}/comments", commentHandler.GetComments)
+	mux.HandleFunc("POST /api/posts/{postId}/comments", middleware.AuthMiddleware(commentHandler.CreateComment))
+	mux.HandleFunc("GET /api/posts/{postId}/comments", commentHandler.GetComments)
+
+	// 2. Оборачиваем mux в middleware цепочку
+	handler := middleware.LoggingMiddleware(mux)
+	handler = middleware.PanicRecoveryMiddleware(handler)
 
 	// Создаем HTTP сервер для graceful shutdown
 	port := config.GetEnv("SERVER_PORT", "8080")
 	srv := &http.Server{
 		Addr:    ":" + port,
-		Handler: nil, // используем глобальный mux с нашими http.HandleFunc()
+		Handler: handler, // mux с middleware
 	}
 
 	// Запускаем отдельную горутину с сервером

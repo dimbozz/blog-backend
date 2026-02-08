@@ -84,7 +84,7 @@ func (h *UserHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 5. Создаем пользователя
+	// 5. Создаем пользователя и токен
 	user, token, err := h.userService.Register(ctx, req.Email, req.Username, passwordHash)
 	if err != nil {
 		log.Printf("Create user error: %v", err)
@@ -92,7 +92,7 @@ func (h *UserHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 7. Успешный ответ
+	// 7. Возвращаем ответ с токеном и данными пользователя
 	response := map[string]interface{}{
 		"message": "User registered successfully",
 		"user": map[string]interface{}{
