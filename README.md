@@ -26,32 +26,51 @@
 
 ```
 blog-backend/
-├── README.md                   # Этот файл
+├── README.md
 ├── cmd
 │   └── api
-│       └── main.go             # Главный файл с запуском сервера
-├── docker-compose.yml          # PostgreSQL в Docker
-├── go.mod                      # Зависимости
+│       └── main.go
+├── docker-compose.yml
+├── go.mod
 ├── go.sum
+├── init.sql
 ├── internal
 │   ├── config
-│   │   └── env.go              # Чтение переменных окружения
-│   ├── handlers                # HTTP обработчики
-│   │   └── middleware
-│   │       └── middleware.go   # Проверка токена
-│   ├── models
-│   │   └── models.go           # Структуры данных
+│   │   └── env.go
+│   ├── handlers
+│   │   ├── auth_handler_test.go
+│   │   ├── comment.go
+│   │   ├── health.go
+│   │   ├── middleware
+│   │   │   ├── auth.go
+│   │   │   ├── error.go
+│   │   │   ├── panic_recovery.go
+│   │   │   └── request_logger.go
+│   │   ├── post.go
+│   │   ├── post_handler_test.go
+│   │   └── user.go
+│   ├── model
+│   │   └── model.go
 │   └── repository
+│       ├── interfaces.go
 │       └── postgres
-│           ├── connection.go   # Подключение к БД
-│           └── user.go         # Работа с БД
-├── migrations
-│   └── init.sql                # Схема БД
+│           ├── comment_repositoy.go
+│           ├── db.go
+│           ├── post_repository.go
+│           └── user_repository.go
 ├── pkg
-│   ├── jwt
-│   │   └── jwt.go              # JWT и bcrypt
-│   ├── logger
-│   └── validator
+│   ├── auth
+│   │   └── context.go
+│   └── jwt
+│       └── jwt.go
+├── service
+│   ├── comment_service.go
+│   ├── post_service.go
+│   ├── service_test
+│   │   ├── memory_post_test.go
+│   │   ├── mock_user_repo_test.go
+│   │   └── post_publish_test.go
+│   └── user_service.go
 └── task.md                     # Задание на разработку проекта
 ```
 
