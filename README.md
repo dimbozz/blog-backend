@@ -1,7 +1,5 @@
 # Расширенная система управления блогом
 
-## 🎯 Разработан безопасный REST API сервис с функциями регистрации и аутентификации пользователей на Go.
-
 ## 📋 Реализовано
 
 ### Обязательный функционал:
@@ -11,18 +9,18 @@
 - ✅ **Защита от SQL-инъекций** (параметризованные запросы)
 
 ### API эндпоинты:
-| Метод  |            Путь             |           Описание       | Требует токен |
-|--------|-----------------------------|--------------------------|---------------|
-|  POST  | `/register`                 | Регистрация пользователя |      Нет      |
-|  POST  | `/login`                    | Вход в систему           |      Нет      |
-|  GET   | `/profile`                  | Получить профиль         |    **Да**     |
-|  GET   | `/health`                   | Проверка состояния       |      Нет      |
-|  GET   | `/api/posts`                | Получить все посты       |      Нет      |
-|  POST  | `/api/posts`                | Создать пост             |      Да       |
-|  GET   | `/api/posts/1`              | Один пост                |      Нет      |
-|  PUT   | `/api/posts/1`              | Обновить                 |      Да       |
-| DELETE | `/api/posts/1`              | Удалить                  |      Да       |
-|  GET   | `/api/posts/user/1`         | Посты пользователя       |      Нет      |
+| Метод  |            Путь             |           Описание                | Требует токен |
+|--------|-----------------------------|-----------------------------------|---------------|
+|  POST  | `/register`                 | Регистрация пользователя          |      Нет      |
+|  POST  | `/login`                    | Вход в систему                    |      Нет      |
+|  GET   | `/health`                   | Проверка состояния                |      Нет      |
+|  GET   | `/api/posts`                | Получить все посты                |      Нет      |
+|  POST  | `/api/posts`                | Создать пост                      |      Да       |
+|  GET   | `/api/posts/1`              | Получить один пост                |      Нет      |
+|  PUT   | `/api/posts/1`              | Обновить пост                     |      Да       |
+| DELETE | `/api/posts/1`              | Удалить пост                      |      Да       |
+|  GET   | `/api/posts/1/comments`     | Получить комментарии к посту 1    |      Нет      |
+|  POST  | `/api/posts/1/comments`     | Создать комментарий к посту 1     |      Да       |
 
 ## 🏗️ Структура проекта
 
@@ -86,73 +84,6 @@ docker-compose ps
 go mod download
 ```
 
-### 4. Реализовано
-
-#### 📄 `database.go` - Работа с базой данных
-- [x] `CreateUser()` - создание пользователя
-- [x] `GetUserByEmail()` - поиск по email
-- [x] `GetUserByID()` - поиск по ID
-- [x] `UserExistsByEmail()` - проверка существования
-
-#### 🔐 `auth.go` - Аутентификация и безопасность
-- [x] `HashPassword()` - хеширование паролей bcrypt
-- [x] `CheckPassword()` - проверка паролей
-- [x] `GenerateToken()` - создание JWT токенов
-- [x] `ValidateToken()` - проверка JWT токенов
-
-#### 🛡️ `middleware.go` - Защита эндпоинтов
-- [x] `AuthMiddleware()` - проверка токенов
-
-#### 🌐 `handlers.go` - HTTP обработчики
-- [x] `RegisterHandler()` - регистрация
-- [x] `LoginHandler()` - авторизация
-- [x] `ProfileHandler()` - профиль пользователя
-
-## 📝 функции
-
-### 1. Реализованы функции безопасности (`auth.go`)
-
-```go
-// Необходимые пакеты
-import (
-    "golang.org/x/crypto/bcrypt"
-    "github.com/golang-jwt/jwt/v5"
-)
-
-// Реализован HashPassword
-func HashPassword(password string) (string, error) {
-    bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-    return string(bytes), err
-}
-```
-
-### 2. Реализована работа с БД (`database.go`)
-
-```go
-// ВАЖНО: Использованы параметризованные запросы!
-func CreateUser(email, username, passwordHash string) (*User, error) {
-    query := `INSERT INTO users (email, username, password_hash) VALUES ($1, $2, $3) RETURNING id, created_at`
-}
-```
-
-### 3. Реализованы middleware (`middleware.go`)
-
-```go
-func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
-    return func(w http.ResponseWriter, r *http.Request) {
-        // 1. Получите токен из заголовка Authorization
-        // 2. Проверьте формат "Bearer <token>"
-        // 3. Валидируйте токен
-        // 4. Добавьте данные в контекст
-        // 5. Передайте управление дальше
-    }
-}
-```
-
-### 4. Реализованы обработчики (`handlers.go`)
-
-Каждый обработчик содержит детальные комментарии с пошаговыми инструкциями.
-
 ### 5. Запуск и тестирование
 
 ```bash
@@ -160,75 +91,68 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 go run *.go
 
 # В другом терминале тестируйте API
-curl -X POST http://localhost:8080/api/register \
+curl -X POST http://localhost:8088/api/register \
   -H "Content-Type: application/json" \
-  -d '{"email":"user@example.com","username":"testuser","password":"SecurePass123"}'
+  -d '{"email":"user-1@example.com","username":"testuser-1","password":"SecurePass123"}'
 ```
 
 ## 🧪 Тестирование API
 
 ### 1. Проверка здоровья сервиса
 ```bash
-curl http://localhost:8080/api/health
+curl http://localhost:8088/api/health
 ```
 
 ### 2. Регистрация пользователя
 ```bash
-curl -X POST http://localhost:8080/api/register \
+curl -X POST http://localhost:8088/api/register \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "user@example.com",
-    "username": "testuser",
+    "email": "user-1@example.com",
+    "username": "testuser-1",
     "password": "SecurePass123"
   }'
 ```
 
 ### 3. Вход в систему
 ```bash
-curl -X POST http://localhost:8080/api/login \
+curl -X POST http://localhost:8088/api/login \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "user@example.com",
+    "email": "user-1@example.com",
     "password": "SecurePass123"
   }'
 ```
 
-### 4. Получение профиля (с токеном)
-```bash
-# Замените YOUR_JWT_TOKEN на токен из ответа /login
-curl http://localhost:8080/api/profile \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
-```
+# GET Получить все посты
+curl http://localhost:8088/api/posts
 
-# GET все посты
-curl http://localhost:8080/api/posts
-
-# POST создать пост (требуется JWT токен)
-curl -X POST http://localhost:8080/api/posts \
+# POST Создать пост (требуется JWT токен)
+curl -X POST http://localhost:8088/api/posts \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -d '{"title":"Пост","content":"Текст"}'
 
 # GET один пост по ID (без токена)
-curl http://localhost:8080/api/posts/1
+curl http://localhost:8088/api/posts/1
 
 # ✅ Обновить пост
-curl -X PUT http://localhost:8080/api/posts/1 \
+curl -X PUT http://localhost:8088/api/posts/1 \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"title":"Обновленный пост"}'
 
 # ✅ Удалить пост
-curl -X DELETE http://localhost:8080/api/posts/1 \
+curl -X DELETE http://localhost:8088/api/posts/1 \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 
 # ✅ Посты пользователя 1
-curl http://localhost:8080/api/posts/user/1
+curl http://localhost:8088/api/posts/user/1
 
 # ✅ С пагинацией
-curl "http://localhost:8080/api/posts/user/1?limit=5&offset=0"
+curl "http://localhost:8088/api/posts/user/1?limit=5&offset=0"
 
-# ✅ Посты пользователя 5 (3 поста)
-curl "http://localhost:8080/api/posts/user/5?limit=3"
+# ✅ Посты пользователя 1 (3 поста)
+curl "http://localhost:8088/api/posts/user/1?limit=3"
 
 ### 5. Тестирование
 
