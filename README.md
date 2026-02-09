@@ -192,7 +192,7 @@ curl -X POST http://localhost:8088/api/posts/1/comments \
   -d '{"content": "Отличный пост!"}'
 ```
 
-### Получить все комментарии к посту 1
+### Получить все комментарии к посту id=1
 ```bash
 curl "curl http://localhost:8088/api/posts/6/comments"
 ```
