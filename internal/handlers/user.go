@@ -71,7 +71,7 @@ func (h *UserHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		middleware.AbortError(w, r, "Database error", http.StatusInternalServerError, err)
 		return
 	} else if exists {
-		middleware.AbortError(w, r, "Database error", http.StatusInternalServerError, err)
+		middleware.AbortError(w, r, "Email already exists", http.StatusConflict, nil)
 		return
 	}
 
