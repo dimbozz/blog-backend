@@ -4,14 +4,18 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"time"
 )
 
 // Центральная обработка ошибок!
 func AbortError(w http.ResponseWriter, r *http.Request, msg string, status int, err error) {
-	// Логируем ошибку
-	log.Printf("%s %s ERROR %d: %s (%v)", r.Method, r.URL.Path, status, msg, err)
+	start := time.Now()
 
-	// Отвечаем клиенту (safeStatusWriter уже есть в panic_recovery.go)
+	// Единообразный лог (как в middleware)
+	log.Printf("%s %s ERROR %d: %s (%v) %s %v",
+		r.Method, r.URL.Path, status, msg, err, r.RemoteAddr, time.Since(start))
+
+	// Ответ
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 

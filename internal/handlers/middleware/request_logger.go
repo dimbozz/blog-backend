@@ -30,6 +30,10 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 		next.ServeHTTP(lrw, r)
 
 		duration := time.Since(start)
-		log.Printf("%s %s %s %d %v", r.Method, r.URL.Path, r.RemoteAddr, lrw.statusCode, duration)
+		// Логируем ТОЛЬКО успешные ответы (200-399)
+		// потому что ошибки логируютсся в AbortError
+		if lrw.statusCode < http.StatusBadRequest {
+			log.Printf("%s %s %d %s %v", r.Method, r.URL.Path, lrw.statusCode, r.RemoteAddr, duration)
+		}
 	})
 }
