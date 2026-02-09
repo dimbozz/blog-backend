@@ -32,6 +32,7 @@ func main() {
 
 	// 1. Создаем mux
 	mux := http.NewServeMux()
+
 	// Создаём слои снизу вверх (Repository → Service → Handler)
 	// Каждый слой зависит только от интерфейса предыдущего
 
@@ -77,6 +78,7 @@ func main() {
 	mux.HandleFunc("GET /api/posts/{postId}/comments", commentHandler.GetComments)
 
 	// 2. Оборачиваем mux в middleware цепочку
+	// для перехвата паник и логирования
 	handler := middleware.LoggingMiddleware(mux)
 	handler = middleware.PanicRecoveryMiddleware(handler)
 

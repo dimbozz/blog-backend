@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"blog-backend/internal/handlers/middleware"
 	"blog-backend/internal/model"
 	"blog-backend/pkg/auth"
 	"blog-backend/service"
@@ -37,20 +38,19 @@ func NewPostHandler(postService *service.PostService, logger *log.Logger) *PostH
 func (h *PostHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 	userID, ok := auth.GetUserIDFromContext(r)
 	if !ok {
-		h.errorResponse(w, http.StatusUnauthorized, "user not authenticated")
+		middleware.AbortError(w, r, "User not authenticated", http.StatusUnauthorized, nil)
 		return
 	}
 
 	var post model.Post
 	if err := json.NewDecoder(r.Body).Decode(&post); err != nil {
-		h.errorResponse(w, http.StatusBadRequest, "invalid JSON")
+		middleware.AbortError(w, r, "Invalid JSON", http.StatusBadRequest, err)
 		return
 	}
 
 	createdPost, err := h.postService.CreatePost(r.Context(), userID, &post)
 	if err != nil {
-		h.log.Printf("create post failed: %v", err)
-		h.errorResponse(w, http.StatusInternalServerError, "internal server error")
+		middleware.AbortError(w, r, "Failed to create post", http.StatusInternalServerError, err)
 		return
 	}
 
@@ -64,20 +64,19 @@ func (h *PostHandler) GetPost(w http.ResponseWriter, r *http.Request) {
 	idStr := strings.TrimPrefix(r.URL.Path, "/api/posts/")
 	idStr = strings.TrimSuffix(idStr, "/")
 	if idStr == "" || idStr == "/" {
-		h.errorResponse(w, http.StatusBadRequest, "post ID required")
+		middleware.AbortError(w, r, "Post ID required", http.StatusBadRequest, nil)
 		return
 	}
 
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		h.errorResponse(w, http.StatusBadRequest, "invalid post ID GetPost")
+		middleware.AbortError(w, r, "Invalid post ID", http.StatusBadRequest, err)
 		return
 	}
 
 	post, err := h.postService.GetPost(r.Context(), id)
 	if err != nil {
-		h.log.Printf("post not found: %d, err: %v", id, err)
-		h.errorResponse(w, http.StatusNotFound, "post not found")
+		middleware.AbortError(w, r, "Post not found", http.StatusNotFound, err)
 		return
 	}
 
@@ -90,7 +89,7 @@ func (h *PostHandler) GetPost(w http.ResponseWriter, r *http.Request) {
 func (h *PostHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 	userID, ok := auth.GetUserIDFromContext(r)
 	if !ok {
-		h.errorResponse(w, http.StatusUnauthorized, "user not authenticated")
+		middleware.AbortError(w, r, "User not authenticated", http.StatusUnauthorized, nil)
 		return
 	}
 
@@ -98,13 +97,13 @@ func (h *PostHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 	idStr := strings.TrimPrefix(r.URL.Path, "/api/posts/")
 	idStr = strings.TrimSuffix(idStr, "/")
 	if idStr == "" || idStr == "/" {
-		h.errorResponse(w, http.StatusBadRequest, "post ID required")
+		middleware.AbortError(w, r, "Post ID required", http.StatusBadRequest, nil)
 		return
 	}
 
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		h.errorResponse(w, http.StatusBadRequest, "invalid post ID Invalid post ID while updating a post")
+		middleware.AbortError(w, r, "Invalid post ID", http.StatusBadRequest, err)
 		return
 	}
 
@@ -116,7 +115,7 @@ func (h *PostHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&updateData); err != nil {
-		h.errorResponse(w, http.StatusBadRequest, "invalid JSON")
+		middleware.AbortError(w, r, "Invalid JSON", http.StatusBadRequest, err)
 		return
 	}
 
@@ -133,12 +132,11 @@ func (h *PostHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 		// Ловим ВСЕ ошибки сервиса
 		switch {
 		case strings.Contains(err.Error(), "post not found"):
-			h.errorResponse(w, http.StatusNotFound, "post not found")
+			middleware.AbortError(w, r, "Post not found", http.StatusNotFound, err)
 		case strings.Contains(err.Error(), "permission denied"):
-			h.errorResponse(w, http.StatusForbidden, "permission denied")
+			middleware.AbortError(w, r, "Permission denied", http.StatusForbidden, err)
 		default:
-			h.log.Printf("update post %d failed: %v", id, err)
-			h.errorResponse(w, http.StatusInternalServerError, "internal server error")
+			middleware.AbortError(w, r, "Failed to update post", http.StatusInternalServerError, err)
 		}
 		return
 	}
@@ -154,7 +152,7 @@ func (h *PostHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
 
 	userID, ok := auth.GetUserIDFromContext(r)
 	if !ok {
-		h.errorResponse(w, http.StatusUnauthorized, "user not authenticated")
+		middleware.AbortError(w, r, "User not authenticated", http.StatusUnauthorized, nil)
 		return
 	}
 
@@ -162,13 +160,13 @@ func (h *PostHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
 	idStr := strings.TrimPrefix(r.URL.Path, "/api/posts/")
 	idStr = strings.TrimSuffix(idStr, "/")
 	if idStr == "" || idStr == "/" {
-		h.errorResponse(w, http.StatusBadRequest, "post ID required")
+		middleware.AbortError(w, r, "Post ID required", http.StatusBadRequest, nil)
 		return
 	}
 
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		h.errorResponse(w, http.StatusBadRequest, "invalid post ID while deleting a post")
+		middleware.AbortError(w, r, "Invalid post ID", http.StatusBadRequest, err)
 		return
 	}
 
@@ -176,12 +174,11 @@ func (h *PostHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
 	if err := h.postService.DeletePost(r.Context(), userID, id); err != nil {
 		switch {
 		case strings.Contains(err.Error(), "post not found"):
-			h.errorResponse(w, http.StatusNotFound, "post not found")
+			middleware.AbortError(w, r, "Post not found", http.StatusNotFound, err)
 		case strings.Contains(err.Error(), "permission denied"):
-			h.errorResponse(w, http.StatusForbidden, "permission denied")
+			middleware.AbortError(w, r, "Permission denied", http.StatusForbidden, err)
 		default:
-			h.log.Printf("delete post %d failed: %v", id, err)
-			h.errorResponse(w, http.StatusInternalServerError, "internal server error")
+			middleware.AbortError(w, r, "Failed to delete post", http.StatusInternalServerError, err)
 		}
 		return
 	}
@@ -204,7 +201,7 @@ func (h *PostHandler) ListPosts(w http.ResponseWriter, r *http.Request) {
 	posts, total, err := h.postService.GetAllPosts(r.Context(), limit, offset)
 	if err != nil {
 		h.log.Printf("list posts failed: %v", err)
-		h.errorResponse(w, http.StatusInternalServerError, "internal server error")
+		middleware.AbortError(w, r, "Failed to list posts", http.StatusInternalServerError, err)
 		return
 	}
 
@@ -219,13 +216,4 @@ func (h *PostHandler) successResponse(w http.ResponseWriter, status int, resp Re
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(resp)
-}
-
-// errorResponse отправляет ошибку в JSON формате
-func (h *PostHandler) errorResponse(w http.ResponseWriter, status int, message string) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(Response{
-		Error: message,
-	})
 }

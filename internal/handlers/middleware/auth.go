@@ -3,8 +3,6 @@ package middleware
 import (
 	"blog-backend/pkg/jwt"
 	"context"
-	"encoding/json"
-	"fmt"
 	"net/http"
 	"strings"
 )
@@ -17,14 +15,14 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		// Проверяем, что заголовок не пустой
 		authHeader := r.Header.Get("Authorization")
 		if authHeader == "" {
-			sendAuthError(w, "Authorization header missing")
+			AbortError(w, r, "Authorization header missing", http.StatusUnauthorized, nil)
 			return
 		}
 
 		// Проверяем формат "Bearer <token>"
 		const bearerPrefix = "Bearer "
 		if !strings.HasPrefix(authHeader, bearerPrefix) {
-			sendAuthError(w, "Invalid authorization header format")
+			AbortError(w, r, "Invalid authorization header format", http.StatusUnauthorized, nil)
 			return
 		}
 
@@ -34,7 +32,7 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		// Валидируем токен с помощью ValidateToken() из auth.go
 		claims, err := jwt.ValidateToken(tokenString)
 		if err != nil {
-			sendAuthError(w, fmt.Sprintf("Invalid token: %v", err))
+			AbortError(w, r, "Invalid token", http.StatusUnauthorized, err)
 			return
 		}
 
@@ -44,18 +42,4 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		// 7. Передаем управление следующему обработчику
 		next.ServeHTTP(w, r.WithContext(ctx))
 	}
-}
-
-// sendAuthError отправляет JSON ответ с ошибкой 401 Unauthorized
-func sendAuthError(w http.ResponseWriter, message string) {
-	w.Header().Set("WWW-Authenticate", `Bearer realm="api"`)
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusUnauthorized)
-
-	_ = json.NewEncoder(w).Encode(map[string]string{
-		// Если токен невалиден - возвращаем 401 Unauthorized
-		// Если токен отсутствует - возвращаем 401 Unauthorized
-		"error":   "401 Unauthorized",
-		"message": message,
-	})
 }

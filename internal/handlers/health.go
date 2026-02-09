@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"blog-backend/internal/handlers/middleware"
 	"blog-backend/internal/repository"
 	"encoding/json"
 	"net/http"
@@ -11,7 +12,7 @@ func HealthHandler(repo repository.HealthChecker) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Проверяем подключение к БД
 		if err := repo.HealthCheck(r.Context()); err != nil {
-			http.Error(w, "Database connection failed", http.StatusServiceUnavailable)
+			middleware.AbortError(w, r, "Database connection failed", http.StatusServiceUnavailable, err)
 			return
 		}
 

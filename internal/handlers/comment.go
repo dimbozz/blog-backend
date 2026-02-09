@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"blog-backend/internal/handlers/middleware"
 	"blog-backend/service"
 )
 
@@ -32,31 +33,31 @@ func (h *CommentHandler) CreateComment(w http.ResponseWriter, r *http.Request) {
 	postId := r.PathValue("postId")
 	postID, err := strconv.Atoi(postId)
 	if err != nil {
-		http.Error(w, "invalid post ID CreateComment", http.StatusBadRequest)
+		middleware.AbortError(w, r, "Invalid post ID", http.StatusBadRequest, err)
 		return
 	}
 
 	// userID из JWT middleware
 	userID, ok := r.Context().Value("userID").(int)
 	if !ok {
-		http.Error(w, "user not authenticated", http.StatusUnauthorized)
+		middleware.AbortError(w, r, "User not authenticated", http.StatusUnauthorized, nil)
 		return
 	}
 
 	var req CreateCommentRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid JSON", http.StatusBadRequest)
+		middleware.AbortError(w, r, "Invalid JSON", http.StatusBadRequest, err)
 		return
 	}
 
 	if req.Content == "" || len(req.Content) > 1000 {
-		http.Error(w, "content required, max 1000 chars", http.StatusBadRequest)
+		middleware.AbortError(w, r, "Content required, max 1000 chars", http.StatusBadRequest, nil)
 		return
 	}
 
 	comment, err := h.commentSvc.CreateComment(r.Context(), userID, postID, req.Content)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		middleware.AbortError(w, r, "Failed to create comment", http.StatusInternalServerError, err)
 		return
 	}
 
@@ -74,13 +75,13 @@ func (h *CommentHandler) GetComments(w http.ResponseWriter, r *http.Request) {
 	postId := r.PathValue("postId")
 	postID, err := strconv.Atoi(postId)
 	if err != nil {
-		http.Error(w, "invalid post ID", http.StatusBadRequest)
+		middleware.AbortError(w, r, "Invalid post ID", http.StatusBadRequest, err)
 		return
 	}
 
 	comments, err := h.commentSvc.GetCommentsByPostID(r.Context(), postID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		middleware.AbortError(w, r, "Failed to get comments", http.StatusInternalServerError, err)
 		return
 	}
 

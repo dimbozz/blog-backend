@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"blog-backend/internal/handlers/middleware"
 	"blog-backend/internal/model"
 	"blog-backend/pkg/auth"
 	"blog-backend/pkg/jwt"
@@ -29,7 +30,7 @@ func NewUserHandler(userService *service.UserService, logger *log.Logger) *UserH
 func (h *UserHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	// Только POST
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		middleware.AbortError(w, r, "Method not allowed", http.StatusMethodNotAllowed, nil)
 		return
 	}
 	ctx := r.Context()
@@ -55,39 +56,36 @@ func (h *UserHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	// 1. Парсим JSON
 	var req model.RegisterRequest
 	if err := parseJSONRequest(r, &req); err != nil {
-		sendErrorResponse(w, "Invalid JSON", http.StatusBadRequest)
+		middleware.AbortError(w, r, "Invalid JSON", http.StatusBadRequest, err)
 		return
 	}
 
 	// 2. Валидация
 	if err := validateRegisterRequest(&req); err != nil {
-		sendErrorResponse(w, err.Error(), http.StatusBadRequest)
+		middleware.AbortError(w, r, err.Error(), http.StatusBadRequest, err)
 		return
 	}
 
 	// 3. Проверяем существование email
 	if exists, err := h.userService.UserExistsByEmail(ctx, req.Email); err != nil {
-		log.Printf("Database error: %v", err)
-		sendErrorResponse(w, "Internal server error", http.StatusInternalServerError)
+		middleware.AbortError(w, r, "Database error", http.StatusInternalServerError, err)
 		return
 	} else if exists {
-		sendErrorResponse(w, "User with this email already exists", http.StatusConflict)
+		middleware.AbortError(w, r, "Database error", http.StatusInternalServerError, err)
 		return
 	}
 
 	// 4. Хешируем пароль
 	passwordHash, err := jwt.HashPassword(req.Password)
 	if err != nil {
-		log.Printf("Hash password error: %v", err)
-		sendErrorResponse(w, "Internal server error", http.StatusInternalServerError)
+		middleware.AbortError(w, r, "Failed to hash password", http.StatusInternalServerError, err)
 		return
 	}
 
 	// 5. Создаем пользователя и токен
 	user, token, err := h.userService.Register(ctx, req.Email, req.Username, passwordHash)
 	if err != nil {
-		log.Printf("Create user error: %v", err)
-		sendErrorResponse(w, "Failed to create user", http.StatusInternalServerError)
+		middleware.AbortError(w, r, "Failed to create user", http.StatusInternalServerError, err)
 		return
 	}
 
@@ -107,12 +105,12 @@ func (h *UserHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 // LoginHandler обрабатывает вход пользователя
 func (h *UserHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		middleware.AbortError(w, r, "Method not allowed", http.StatusMethodNotAllowed, nil)
 		return
 	}
 
 	ctx := r.Context()
-	// TODO: Реализуйте авторизацию пользователя
+	// Авторизация пользователя
 	//
 	// Пошаговый план:
 	// 1. Распарсите JSON из тела запроса в структуру LoginRequest
@@ -131,21 +129,20 @@ func (h *UserHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	// 1. Парсим JSON
 	var req model.LoginRequest
 	if err := parseJSONRequest(r, &req); err != nil {
-		sendErrorResponse(w, "Invalid JSON", http.StatusBadRequest)
+		middleware.AbortError(w, r, "Invalid JSON", http.StatusBadRequest, err)
 		return
 	}
 
 	// 2. Валидация
 	if err := validateLoginRequest(&req); err != nil {
-		sendErrorResponse(w, err.Error(), http.StatusBadRequest)
+		middleware.AbortError(w, r, "Invalid email or password", http.StatusBadRequest, err)
 		return
 	}
 
 	// 3. Вызываем сервис
 	user, token, err := h.userService.Login(ctx, req.Email, req.Password)
 	if err != nil {
-		log.Printf("Login error: %v", err)
-		http.Error(w, "Invalid email or password", http.StatusUnauthorized)
+		middleware.AbortError(w, r, "Invalid email or password", http.StatusUnauthorized, err)
 		return
 	}
 
@@ -177,20 +174,19 @@ func (h *UserHandler) ProfileHandler(w http.ResponseWriter, r *http.Request) {
 	// Контекст уже должен содержать userID
 	userID, ok := auth.GetUserIDFromContext(r)
 	if !ok {
-		sendErrorResponse(w, "User ID not found in context", http.StatusInternalServerError)
+		middleware.AbortError(w, r, "User ID not found in context", http.StatusInternalServerError, nil)
 		return
 	}
 
 	// Загружаем данные пользователя из БД с помощью GetUserByID()
 	user, err := h.userService.GetUserByID(ctx, userID)
 	if err != nil {
-		log.Printf("Database error: %v", err)
-		sendErrorResponse(w, "Internal server error", http.StatusInternalServerError)
+		middleware.AbortError(w, r, "Database error", http.StatusInternalServerError, err)
 		return
 	}
 	// Если пользователь не найден - возвращаем 404
 	if user == nil {
-		sendErrorResponse(w, "User not found", http.StatusNotFound)
+		middleware.AbortError(w, r, "User not found", http.StatusNotFound, nil)
 		return
 	}
 
@@ -213,14 +209,6 @@ func sendJSONResponse(w http.ResponseWriter, data interface{}, statusCode int) {
 		log.Printf("Error encoding JSON response: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}
-}
-
-// sendErrorResponse отправляет JSON ответ с ошибкой (вспомогательная функция)
-func sendErrorResponse(w http.ResponseWriter, message string, statusCode int) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(statusCode)
-	response := map[string]string{"error": message}
-	json.NewEncoder(w).Encode(response)
 }
 
 // parseJSONRequest парсит JSON из тела запроса (вспомогательная функция)
