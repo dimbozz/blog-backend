@@ -135,19 +135,19 @@ curl -X POST http://localhost:8088/api/login \
   }'
 ```
 
-### GET Получить все посты
+### Получить все посты
 ```bash
 curl http://localhost:8088/api/posts
 ```
 
-### POST Создать пост (требуется JWT токен, полученнный при входе в систему)
+### Создать пост (требуется JWT токен, полученнный при входе в систему)
 ```bash
 curl -X POST http://localhost:8088/api/posts \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -d '{"title":"Пост номер 1","content":"Текст поста номер 1"}'
 ```
 
-### POST Создать пост с отложенной публикацией (требуется JWT токен)
+### Создать пост с отложенной публикацией (требуется JWT токен)
 ```bash
 curl -X POST http://localhost:8088/api/posts \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
@@ -157,7 +157,7 @@ curl -X POST http://localhost:8088/api/posts \
        }'
 ```
 
-### GET Получить один пост c id=1 (без токена)
+### Получить один пост c id=1 (без токена)
 ```bash
 curl http://localhost:8088/api/posts/1
 ```
@@ -179,19 +179,19 @@ curl -X DELETE http://localhost:8088/api/posts/1 \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
-### GET Получить все посты с пагинацией
+### Получить все посты с пагинацией
 ```bash
 curl "http://localhost:8088/api/posts?limit=2&offset=1"
 ```
 
-### POST Создать комментарий к посту id=1 (требуется JWT токен, полученнный при входе в систему)
+### Создать комментарий к посту id=1 (требуется JWT токен, полученнный при входе в систему)
 ```bash
 curl -X POST http://localhost:8088/api/posts/1/comments \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -d '{"content": "Отличный пост!"}'
 ```
 
-### GET Получить все комментарии к посту 1
+### Получить все комментарии к посту 1
 ```bash
 curl "curl http://localhost:8088/api/posts/6/comments"
 ```
@@ -201,23 +201,20 @@ curl "curl http://localhost:8088/api/posts/6/comments"
 ### Перейти в корень проекта
 cd blog-backend
 
-### Только handlers тесты  
+### Тесты handlers
+```bash
 go test ./internal/handlers -v
-
-### Только post_handler тесты
-go test ./internal/handlers -run TestPostHandler_AllScenarios_TableDriven -v
+```
 
 ### Покрытие кода тестами
+```bash
 go test ./internal/handlers -cover
-
-### Быстрый тест (без verbose)
-go test ./internal/handlers -run TestPostHandler
-
-### Тест с таймаутом (если зависает)
-go test ./internal/handlers -timeout 10s
+```
 
 ### Тест отложенных публикаций
+```bash
 go test ./service/service_test -v
+```
 
 ## 🆘 Получение помощи
 
