@@ -27,11 +27,9 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 			statusCode:     http.StatusOK,
 		}
 
-		log.Printf("%s %s %s", r.Method, r.URL.Path, r.RemoteAddr)
-
 		next.ServeHTTP(lrw, r)
 
 		duration := time.Since(start)
-		log.Printf("%s %s %d %v", r.Method, r.URL.Path, lrw.statusCode, duration)
+		log.Printf("%s %s %s %d %v", r.Method, r.URL.Path, r.RemoteAddr, lrw.statusCode, duration)
 	})
 }
