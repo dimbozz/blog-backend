@@ -199,7 +199,9 @@ curl "curl http://localhost:8088/api/posts/6/comments"
 ## 📊 Автотесты
 
 ### Перейти в корень проекта
+```bash
 cd blog-backend
+```
 
 ### Тесты handlers
 ```bash
