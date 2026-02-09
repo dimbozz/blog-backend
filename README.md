@@ -25,7 +25,6 @@ blog-backend/
 ├── docker-compose.yml
 ├── go.mod
 ├── go.sum
-├── init.sql
 ├── internal
 │   ├── config
 │   │   └── env.go
@@ -50,6 +49,8 @@ blog-backend/
 │           ├── db.go
 │           ├── post_repository.go
 │           └── user_repository.go
+├── migrations
+│   └── init.sql
 ├── pkg
 │   ├── auth
 │   │   └── context.go
