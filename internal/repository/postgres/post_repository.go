@@ -172,7 +172,7 @@ func (r *PostgresPostRepository) DeletePost(ctx context.Context, id int) error {
 	return nil
 }
 
-// Возвращаем список постов с пагинацией (limit/offset) - только опубликованные посты
+// Возвращаем список постов с пагинацией (limit/offset)
 func (r *PostgresPostRepository) ListPosts(ctx context.Context, limit, offset int) ([]*model.Post, error) {
 	query := `
         SELECT id, author_id, title, content, status, publish_at, created_at, updated_at
@@ -211,7 +211,7 @@ func (r *PostgresPostRepository) ListPosts(ctx context.Context, limit, offset in
 // Подсчитывает общее количество постов (для пагинации)
 func (r *PostgresPostRepository) CountPosts(ctx context.Context) (int, error) {
 	var count int
-	err := r.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM posts WHERE status = 'published'").Scan(&count)
+	err := r.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM posts").Scan(&count)
 	if err != nil {
 		return 0, fmt.Errorf("failed to count posts: %w", err)
 	}
